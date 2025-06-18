@@ -24,7 +24,7 @@
 		{#if showMenuButton}
 			<button
 				type="button"
-				class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
+				class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 lg:hidden"
 				onclick={onMenuToggle}
 				aria-label="Toggle sidebar"
 			>
