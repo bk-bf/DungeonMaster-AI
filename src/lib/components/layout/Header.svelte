@@ -13,11 +13,14 @@
 	}: Props = $props();
 </script>
 
+<!-- ORANGE DEBUG for Header content -->
 <header
-	class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between"
+	class="bg-orange-100 border-2 border-orange-500 px-4 py-3 flex items-center justify-between"
 >
 	<!-- Left side: Menu button and title -->
-	<div class="flex items-center space-x-3">
+	<div
+		class="flex items-center space-x-3 bg-pink-100 border border-pink-400 p-2"
+	>
 		{#if showMenuButton}
 			<button
 				type="button"
@@ -25,7 +28,6 @@
 				onclick={onMenuToggle}
 				aria-label="Toggle sidebar"
 			>
-				<!-- FIXED: Added explicit w-5 h-5 sizing -->
 				<svg
 					class="w-5 h-5 flex-shrink-0"
 					fill="none"
@@ -46,13 +48,14 @@
 	</div>
 
 	<!-- Right side: Navigation placeholder -->
-	<div class="flex items-center space-x-2">
+	<div
+		class="flex items-center space-x-2 bg-cyan-100 border border-cyan-400 p-2"
+	>
 		<button
 			type="button"
 			class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
 			aria-label="Settings"
 		>
-			<!-- FIXED: Added explicit w-5 h-5 sizing -->
 			<svg
 				class="w-5 h-5 flex-shrink-0"
 				fill="none"

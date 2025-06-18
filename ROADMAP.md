@@ -21,6 +21,25 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 
 ---
 
+## **UI Component Color Reference**
+
+| Color | Component | Description |
+|-------|-----------|-------------|
+| 🔴 Red | Main viewport container | Outermost container element |
+| 🔵 Blue | Header wrapper | Contains navigation and app controls |
+| 🟢 Green | Horizontal layout container | Main flex container for sidebar and content |
+| 🟡 Yellow | Sidebar container | Left navigation panel (25% width) |
+| 🟣 Purple | Main content container | Primary content area (75% width) |
+| 🟠 Orange | Header component content | Content within the header area |
+| 🩷 Pink | Header left section | Left-aligned header elements |
+| 🩵 Cyan | Header right section | Right-aligned header elements |
+| 🟢 Teal | Sidebar component content | Navigation and action items in sidebar |
+| 🟤 Slate | Page content wrapper | Container for page-specific content |
+| 🟢 Emerald | Chat messages area | Displays conversation history |
+| 🟣 Violet | Chat input area | Message composition interface |
+
+---
+
 ## **Phase 1: Open WebUI Interface Replication (Days 1-10)**
 
 ### **Day 1: SvelteKit Foundation Setup**
