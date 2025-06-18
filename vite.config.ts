@@ -6,5 +6,6 @@ export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
-	],
+	]
+	// Remove the resolve.alias section - SvelteKit handles this automatically
 });
