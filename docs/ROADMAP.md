@@ -35,8 +35,8 @@ Features that require significant resources or external factors - revisit when c
 ### **🔥 Critical Path (P0)**
 **Flow Coverage**: Complete **Narrative Generation** + **Context Retrieval** + Basic **Rule Validation**
 
-- [ ] **Install Chronos-Hermes 13B** locally with llama.cpp (**Narrative Generation**)
-- [ ] **Replace mock responses** with real AI narrative generation (**Narrative Generation**)
+- [ ] **Setup Google Gemini 2.5 Flash API** with free tier access (**Narrative Generation**)
+- [ ] **Replace mock responses** with real AI narrative generation via Gemini API (**Narrative Generation**)
 - [ ] **Basic character sheet system** (markdown format) (**Context Retrieval** + **Rule Validation**)
 - [ ] **Dice rolling mechanics** with D&D 5e rules (**Dice Processing** + **Rule Validation**)
 - [ ] **Campaign context management** for story continuity (**Context Retrieval**)
@@ -44,17 +44,17 @@ Features that require significant resources or external factors - revisit when c
 ### **⭐ High Impact (P1)**
 **Flow Coverage**: Enhanced **Intent Analysis** + **Consequence Application**
 
-- [ ] **AI response streaming** for real-time generation (**Narrative Generation** enhancement)
-- [ ] **Error handling and fallbacks** for AI failures (**Narrative Generation** reliability)
+- [ ] **D&D-optimized prompt engineering** for Gemini API (**Intent Analysis** + **Narrative Generation**)
+- [ ] **Error handling and API fallbacks** for network/API failures (**Narrative Generation** reliability)
 - [ ] **Basic spell database** integration (**Rule Validation** + **Context Retrieval**)
 - [ ] **Campaign export to .md files** (**File Updates** enhancement)
 
 ### **📋 Medium Impact (P2)**
 **Flow Coverage**: **Player Input** + **Narrative Generation** polish
 
-- [ ] **Enhanced loading animations** for AI responses (**Player Input** feedback)
+- [ ] **Enhanced loading animations** for API responses (**Player Input** feedback)
 - [ ] **Keyboard shortcuts** for power users (**Player Input** efficiency)
-- [ ] **Response caching** for performance (**Narrative Generation** optimization)
+- [ ] **Response caching** for API optimization and cost management (**Narrative Generation** optimization)
 
 ---
 
