@@ -5,13 +5,13 @@ import type { ContextFile, EntityExtraction, PlayerPreferences } from '$lib/type
 class ContextFileManager {
 	private files: Map<string, ContextFile> = new Map();
 
-	// Initialize with default character files
-	async initializeCharacterFiles(characterName: string) {
+	// ✅ FIX: Accept actual character data instead of hardcoded values
+	async initializeCharacterFiles(characterName: string, characterClass: string = 'Fighter', characterBackground: string = 'Folk Hero') {
 		const defaultFiles: ContextFile[] = [
 			{
 				id: 'character_sheet',
 				filename: 'character_sheet.md',
-				content: this.generateCharacterSheetMD(characterName),
+				content: this.generateCharacterSheetMD(characterName, characterClass, characterBackground), // ✅ Pass actual values
 				tags: ['character', 'stats', 'abilities', 'core'],
 				lastUpdated: new Date(),
 				priority: 10
@@ -64,8 +64,6 @@ class ContextFileManager {
 
 		this.saveToStorage();
 	}
-
-
 
 	// Extract keywords and entities from player input
 	extractEntities(playerInput: string): EntityExtraction {
@@ -188,16 +186,16 @@ class ContextFileManager {
 		this.saveToStorage();
 	}
 
-	// Generate dynamic character sheet
-	private generateCharacterSheetMD(characterName: string): string {
+	// ✅ FIX: Update to accept actual character data
+	private generateCharacterSheetMD(characterName: string, characterClass: string, characterBackground: string): string {
 		return `# ${characterName} - Character Sheet
 
 ## Basic Information
 - **Name**: ${characterName}
 - **Race**: Human
-- **Class**: Rogue
+- **Class**: ${characterClass}
 - **Level**: 1
-- **Background**: Folk Hero
+- **Background**: ${characterBackground}
 
 ## Ability Scores
 - **Strength**: 12 (+1)

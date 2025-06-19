@@ -1,16 +1,26 @@
+<!-- src/routes/+page.svelte -->
 <script lang="ts">
 	import { ChatDisplay, ChatInput } from "$lib/components/chat";
 	import { campaignStore } from "$lib/stores/campaigns";
 	import { SettingsButton } from "$lib/components/ui";
 	import { buildDungeonMasterPrompt } from "$lib/services/prompts";
 	import { contextManager } from "$lib/services/context";
+	import { contextFileManager } from "$lib/services/contextFiles";
+	import CharacterSetup from "$lib/components/character/CharacterSetup.svelte";
 	import ContextTester from "$lib/components/debug/ContextTester.svelte";
-	import type { Message } from "$lib/components/chat";
 
 	let isLoading = false;
 	let showContextTester = false;
+	let showCharacterSetup = false;
 
-	// Reactive statement to get current campaign messages
+	// Check if character setup is needed
+	$: {
+		const files = contextFileManager.getAllFiles();
+		const hasCharacterSheet = files.some((f) => f.id === "character_sheet");
+		showCharacterSetup = !hasCharacterSheet;
+	}
+
+	// Your existing reactive statements and functions...
 	$: activeCampaign = $campaignStore.campaigns.find(
 		(c) => c.id === $campaignStore.activeCampaignId,
 	);
@@ -19,7 +29,6 @@
 	async function handleSendMessage(event: CustomEvent<string>) {
 		const messageContent = event.detail;
 
-		// Add user message to store
 		campaignStore.addMessage({
 			type: "user",
 			content: messageContent,
@@ -29,25 +38,27 @@
 
 		try {
 			// Build campaign history for context
-			const campaignHistory = messages.map(
-				(m) => `${m.type}: ${m.content}`,
+			const campaignHistory = messages.map((m) =>
+				contextManager.formatMessageForHistory(m.type, m.content),
 			);
 
-			// Get character data
-			const character = {
-				name: activeCampaign?.characterName || "Adventurer",
-				class: activeCampaign?.characterClass || "Fighter",
-				level: activeCampaign?.characterLevel || 1,
-				background: activeCampaign?.characterBackground || "Folk Hero",
-			};
+			// Get character data from context files
+			const characterFiles = contextFileManager.getAllFiles();
+			const characterSheet = characterFiles.find(
+				(f) => f.id === "character_sheet",
+			);
+			const character = characterSheet
+				? contextManager.parseCharacterFromMD(characterSheet.content)
+				: {
+						name: "Adventurer",
+						class: "Fighter",
+						level: 1,
+						background: "Folk Hero",
+					};
 
 			// Get player preferences
 			const playerPreferences = activeCampaign?.playerPreferences || {
-				favoriteGenres: [
-					"Zero-to-hero",
-					"Character growth",
-					"Mentorship",
-				],
+				favoriteGenres: ["Zero-to-hero", "Character growth"],
 				preferredNarrativeStyle:
 					"Deep character development with moral complexity",
 				preferredThemes: [
@@ -56,7 +67,7 @@
 				],
 			};
 
-			// ✅ CORRECT - Await the async context building
+			// Build full context using context manager
 			const context = await contextManager.buildFullContext(
 				messageContent,
 				campaignHistory,
@@ -66,7 +77,6 @@
 
 			// Generate AI response using enhanced context
 			const prompt = buildDungeonMasterPrompt(messageContent, context);
-			console.log("Sending context-enhanced prompt to Gemini...");
 
 			const response = await fetch("/api/gemini", {
 				method: "POST",
@@ -81,13 +91,12 @@
 
 			const data = await response.json();
 
-			// Add AI response to store
 			campaignStore.addMessage({
 				type: "assistant",
 				content: data.response,
 			});
 
-			// ✅ Update character progression after successful response
+			// Update character progression
 			await contextManager.updateCharacterProgression(
 				messageContent,
 				data.response,
@@ -95,20 +104,13 @@
 		} catch (error) {
 			console.error("Enhanced Gemini API Error:", error);
 
-			// Enhanced fallback response
 			campaignStore.addMessage({
 				type: "assistant",
 				content: `## **The Weary Traveler Tavern - Evening** 🌙
 
 *The Dungeon Master seems momentarily distracted by otherworldly forces...*
 
-The candlelight flickers strangely as an unseen magical disturbance ripples through the tavern. You notice the other patrons pause their conversations, sensing something amiss in the air.
-
-*Old Henrik* looks concerned. "Did you feel that, lad? Something's not right tonight..."
-
-Your rogue instincts suggest waiting for the disturbance to pass, investigating the source of the magical interference, or asking *Henrik* if he's experienced this before.
-
-*Error: ${error instanceof Error ? error.message : "An unknown error occurred"}*
+*Error: ${error instanceof Error ? error.message : String(error)}*
 
 What's your move? 🎯`,
 			});
@@ -117,18 +119,29 @@ What's your move? 🎯`,
 		}
 	}
 
+	function handleCharacterSetupComplete() {
+		showCharacterSetup = false;
+		// Optionally start the first campaign automatically
+		campaignStore.createCampaign("My First Adventure");
+	}
+
 	function toggleContextTester() {
 		showContextTester = !showContextTester;
 	}
 </script>
 
+<!-- Character Setup Modal (shows for new users) -->
+{#if showCharacterSetup}
+	<CharacterSetup on:complete={handleCharacterSetupComplete} />
+{/if}
+
 <!-- Full height chat interface -->
 <div class="h-full flex flex-col relative">
-	<!-- Settings and Debug buttons in top-right corner -->
+	<!-- Settings and Debug buttons -->
 	<div class="absolute top-4 right-4 z-10 flex space-x-2">
 		<button
 			onclick={toggleContextTester}
-			class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+			class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
 			aria-label="Toggle Context Tester"
 		>
 			🧪
@@ -136,8 +149,8 @@ What's your move? 🎯`,
 		<SettingsButton />
 	</div>
 
+	<!-- Context Tester Overlay -->
 	{#if showContextTester}
-		<!-- Context Tester Overlay -->
 		<div
 			class="absolute inset-0 bg-black bg-opacity-50 z-20 flex items-center justify-center p-4"
 		>

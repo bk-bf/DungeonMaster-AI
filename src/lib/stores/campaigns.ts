@@ -1,6 +1,7 @@
 // src/lib/stores/campaigns.ts
-import type { Campaign, Message, PlayerPreferences } from '$lib/types';
 import { writable } from 'svelte/store';
+import type { Campaign, Message, PlayerPreferences } from '$lib/types';
+
 interface CampaignStore {
 	campaigns: Campaign[];
 	activeCampaignId: string | null;
@@ -42,7 +43,7 @@ function createCampaignStore() {
 				],
 				lastMessage: 'Your adventure begins now...',
 				timestamp: new Date(),
-				isActive: true  // Changed from false to true
+				isActive: true
 			};
 
 			update(store => ({
@@ -52,6 +53,7 @@ function createCampaignStore() {
 
 			return newCampaign.id;
 		},
+
 		// Switch to existing campaign
 		selectCampaign: (campaignId: string) => {
 			update(store => ({
@@ -89,6 +91,29 @@ function createCampaignStore() {
 					)
 				};
 			});
+		},
+
+		// Update active campaign with character information
+		updateCampaignCharacter: (characterInfo: {
+			name: string;
+			class: string;
+			background: string;
+			preferences: PlayerPreferences;
+		}) => {
+			update(store => ({
+				...store,
+				campaigns: store.campaigns.map(campaign =>
+					campaign.id === store.activeCampaignId
+						? {
+							...campaign,
+							characterName: characterInfo.name,
+							characterClass: characterInfo.class,
+							characterBackground: characterInfo.background,
+							playerPreferences: characterInfo.preferences
+						}
+						: campaign
+				)
+			}));
 		},
 
 		// Rename campaign

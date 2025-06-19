@@ -1,12 +1,29 @@
 <script lang="ts">
 	import "../app.css";
 	import { Sidebar } from "$lib/components/layout";
+	import { contextFileManager } from "$lib/services/contextFiles";
+	import { onMount } from "svelte";
 
 	let sidebarOpen = true;
 	let sidebarWidth = 270; // Default width in pixels
 	let isResizing = false;
 	let startX = 0;
 	let startWidth = 0;
+
+	// ✅ Initialize context files when app loads
+	onMount(async () => {
+		// Load existing context files from localStorage
+		contextFileManager.loadFromStorage();
+
+		// Check if character sheet exists
+		const existingFiles = contextFileManager.getAllFiles();
+		const hasCharacterSheet = existingFiles.some(
+			(f) => f.id === "character_sheet",
+		);
+
+		console.log("Context files loaded:", existingFiles.length, "files");
+		console.log("Has character sheet:", hasCharacterSheet);
+	});
 
 	function toggleSidebar() {
 		sidebarOpen = !sidebarOpen;

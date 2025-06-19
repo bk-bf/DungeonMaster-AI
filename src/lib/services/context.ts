@@ -14,10 +14,10 @@ export class CampaignContextManager {
 		playerAction: string,
 		campaignHistory: string[],
 		character: any,
-		playerPreferences?: PlayerPreferences
+		playerPreferences?: PlayerPreferences | null  // ✅ Accept both null and undefined
 	): Promise<CampaignContext> {
 
-		// If no preferences provided, try to get from store
+		// Handle both null and undefined
 		if (!playerPreferences) {
 			const preferencesStore = get(playerPreferencesStore);
 			playerPreferences = preferencesStore.preferences || undefined;
@@ -49,7 +49,8 @@ export class CampaignContextManager {
 		};
 	}
 
-	private parseCharacterFromMD(markdown: string): any {
+	// Change from private to public
+	public parseCharacterFromMD(markdown: string): any {
 		const character: any = {};
 
 		// Extract character info from markdown
