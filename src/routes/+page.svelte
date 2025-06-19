@@ -9,20 +9,48 @@
 	import CharacterSetup from "$lib/components/character/CharacterSetup.svelte";
 	import ContextTester from "$lib/components/debug/ContextTester.svelte";
 	import { sessionManager } from "$lib/services/session";
+	import { onMount } from "svelte";
 
-	let showCharacterSetup = false;
 	let isLoading = false;
 	let showContextTester = false;
+	let showCharacterSetup = false;
+	let sessionLoaded = false; // ✅ Add loading state
 
-	// Check if character setup is needed
+	// ✅ Wait for session to load before showing character setup
 	$: {
-		const files = contextFileManager.getAllFiles();
-		const hasCharacterSheet = files.some((f) => f.id === "character_sheet");
-		const hasActiveSession = sessionManager.hasActiveSession();
+		if (sessionLoaded) {
+			const files = contextFileManager.getAllFiles();
+			const hasCharacterSheet = files.some(
+				(f) => f.id === "character_sheet",
+			);
+			const hasActiveSession = sessionManager.hasActiveSession();
 
-		// Only show character setup if no character sheet AND no active session
-		showCharacterSetup = !hasCharacterSheet && !hasActiveSession;
+			showCharacterSetup = !hasCharacterSheet && !hasActiveSession;
+		}
 	}
+
+	// ✅ Load session data on mount
+	onMount(async () => {
+		try {
+			console.log("🔄 Starting session restoration...");
+
+			// Wait for session restoration to complete
+			await campaignStore.restoreFromSession();
+			console.log("✅ Session restoration completed");
+
+			// Load context files
+			contextFileManager.loadFromStorage();
+			console.log("✅ Context files loaded");
+
+			// Mark session as loaded
+			sessionLoaded = true;
+			console.log("✅ Session marked as loaded");
+		} catch (error) {
+			console.error("❌ Failed to restore session:", error);
+			// Still mark as loaded even if restoration fails
+			sessionLoaded = true;
+		}
+	});
 
 	// Your existing reactive statements and functions...
 	$: activeCampaign = $campaignStore.campaigns.find(
@@ -134,45 +162,57 @@ What's your move? 🎯`,
 	}
 </script>
 
-<!-- Character Setup Modal (shows for new users) -->
-{#if showCharacterSetup}
+<!-- ✅ Only show character setup after session has loaded -->
+{#if sessionLoaded && showCharacterSetup}
 	<CharacterSetup on:complete={handleCharacterSetupComplete} />
 {/if}
 
-<!-- Full height chat interface -->
-<div class="h-full flex flex-col relative">
-	<!-- Settings and Debug buttons -->
-	<div class="absolute top-4 right-4 z-10 flex space-x-2">
-		<button
-			onclick={toggleContextTester}
-			class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-			aria-label="Toggle Context Tester"
-		>
-			🧪
-		</button>
-		<SettingsButton />
-	</div>
-
-	<!-- Context Tester Overlay -->
-	{#if showContextTester}
-		<div
-			class="absolute inset-0 bg-black bg-opacity-50 z-20 flex items-center justify-center p-4"
-		>
-			<div class="relative">
-				<button
-					onclick={toggleContextTester}
-					class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-				>
-					×
-				</button>
-				<ContextTester />
-			</div>
+<!-- ✅ Show loading screen while session is loading -->
+{#if !sessionLoaded}
+	<div class="h-full flex items-center justify-center bg-gray-50">
+		<div class="text-center">
+			<div
+				class="animate-spin rounded-full h-12 w-12 border-b-4 border-red-800 mx-auto mb-4"
+			></div>
+			<p class="text-gray-600">Loading your adventure...</p>
 		</div>
-	{/if}
+	</div>
+{:else}
+	<!-- Full height chat interface -->
+	<div class="h-full flex flex-col relative">
+		<!-- Settings and Debug buttons -->
+		<div class="absolute top-4 right-4 z-10 flex space-x-2">
+			<button
+				onclick={toggleContextTester}
+				class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+				aria-label="Toggle Context Tester"
+			>
+				🧪
+			</button>
+			<SettingsButton />
+		</div>
 
-	<!-- Chat Display Component -->
-	<ChatDisplay {messages} {isLoading} />
+		<!-- Context Tester Overlay -->
+		{#if showContextTester}
+			<div
+				class="absolute inset-0 bg-black bg-opacity-50 z-20 flex items-center justify-center p-4"
+			>
+				<div class="relative">
+					<button
+						onclick={toggleContextTester}
+						class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+					>
+						×
+					</button>
+					<ContextTester />
+				</div>
+			</div>
+		{/if}
 
-	<!-- Chat Input Component -->
-	<ChatInput disabled={isLoading} on:send={handleSendMessage} />
-</div>
+		<!-- Chat Display Component -->
+		<ChatDisplay {messages} {isLoading} />
+
+		<!-- Chat Input Component -->
+		<ChatInput disabled={isLoading} on:send={handleSendMessage} />
+	</div>
+{/if}
