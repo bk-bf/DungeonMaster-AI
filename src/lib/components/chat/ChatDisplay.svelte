@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { parseMarkdown } from "$lib/utils/markdown";
+
     interface Message {
         id: number;
         type: "user" | "assistant";
@@ -52,7 +54,7 @@
                         </div>
                     </div>
 
-                    <!-- Message content -->
+                    <!-- Message content with markdown support -->
                     <div class="flex-1">
                         <div class="text-sm text-gray-500 mb-1">
                             {message.type === "user" ? "You" : "Dungeon Master"}
@@ -62,7 +64,10 @@
                                 ? 'gray'
                                 : 'gray'}-200 rounded-lg p-3"
                         >
-                            <p class="text-gray-800">{message.content}</p>
+                            <!-- Render markdown content -->
+                            <div class="markdown-content">
+                                {@html parseMarkdown(message.content)}
+                            </div>
                         </div>
                     </div>
                 </div>

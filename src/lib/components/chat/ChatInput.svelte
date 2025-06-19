@@ -6,10 +6,8 @@
         placeholder?: string;
     }
 
-    let {
-        disabled = false,
-        placeholder = "Describe your action... (Press Enter to send, Shift+Enter for new line)",
-    }: Props = $props();
+    let { disabled = false, placeholder = "Describe your action..." }: Props =
+        $props();
 
     const dispatch = createEventDispatcher<{
         send: string;
