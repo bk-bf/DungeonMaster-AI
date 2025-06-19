@@ -102,12 +102,14 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 - [x] **VERIFIABLE**: Switch between different chat histories updates main view
 
 ### **Day 8: Theme System Implementation**
-- [ ] **TESTABLE**: Create theme store using Svelte's writable store
-- [ ] **TESTABLE**: Implement light/dark theme toggle with store subscription
-- [ ] **TESTABLE**: Add theme persistence using browser localStorage
-- [ ] **TESTABLE**: Configure Tailwind dark mode classes with reactive CSS
-- [ ] **VERIFIABLE**: Theme toggle button switches between light/dark modes
-- [ ] **VERIFIABLE**: Theme preference persists after page reload
+- [x] **TESTABLE**: Extract settings button into separate component
+- [x] **TESTABLE**: Functional dropdown with placeholder menu items
+- [-] **TESTABLE**: Create theme store using Svelte's writable store
+- [-] **TESTABLE**: Implement light/dark theme toggle with store subscription
+- [-] **TESTABLE**: Add theme persistence using browser localStorage
+- [-] **TESTABLE**: Configure Tailwind dark mode classes with reactive CSS
+- [-] **VERIFIABLE**: Theme toggle button switches between light/dark modes
+- [-] **VERIFIABLE**: Theme preference persists after page reload
 
 ### **Day 9: Responsive Design Polish**
 - [ ] **TESTABLE**: Optimize mobile layout with Svelte's responsive directives
