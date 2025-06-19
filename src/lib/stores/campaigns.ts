@@ -52,7 +52,7 @@ function createCampaignStore() {
                 ],
                 lastMessage: 'Your adventure begins now...',
                 timestamp: new Date(),
-                isActive: false
+                isActive: true  // Changed from false to true
             };
 
             update(store => ({
@@ -62,7 +62,6 @@ function createCampaignStore() {
 
             return newCampaign.id;
         },
-
         // Switch to existing campaign
         selectCampaign: (campaignId: string) => {
             update(store => ({
