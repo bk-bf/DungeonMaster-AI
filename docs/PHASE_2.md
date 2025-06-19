@@ -17,8 +17,8 @@
 - [x] **TESTABLE**: Install Google Generative AI SDK with npm install @google/generative-ai
 - [x] **TESTABLE**: Create Gemini service module with API integration
 - [x] **TESTABLE**: Replace mock AI responses with actual Gemini API calls in chat interface
-- [ ] **VERIFIABLE**: AI generates coherent responses to basic D&D prompts
-- [ ] **VERIFIABLE**: Response times under 5 seconds with API calls
+- [x] **VERIFIABLE**: AI generates coherent responses to basic D&D prompts
+- [x] **VERIFIABLE**: Response times under 5 seconds with API calls
 
 **Player Flow Implementation**:
 - **Context Retrieval**: Basic campaign message history passed to Gemini API

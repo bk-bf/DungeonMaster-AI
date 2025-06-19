@@ -7,6 +7,7 @@
 	import type { Message } from "$lib/components/chat";
 
 	let isLoading = false;
+	let usageStats = { requestCount: 0, estimatedTokens: 0, responseTime: 0 };
 
 	// Reactive statement to get current campaign messages
 	$: activeCampaign = $campaignStore.campaigns.find(
@@ -55,11 +56,22 @@
 				prompt.substring(0, 200) + "...",
 			);
 
+			const startTime = Date.now();
 			const aiResponse = await geminiService.generateResponse(prompt);
+			const responseTime = Date.now() - startTime;
+
 			console.log(
 				"Received response from Gemini:",
 				aiResponse.substring(0, 100) + "...",
 			);
+
+			// Update usage stats (estimated values since geminiService doesn't return usage data)
+			usageStats = {
+				requestCount: usageStats.requestCount + 1,
+				estimatedTokens:
+					usageStats.estimatedTokens + Math.ceil(prompt.length / 4), // Rough token estimation
+				responseTime: responseTime,
+			};
 
 			// Add AI response to store
 			campaignStore.addMessage({
@@ -84,6 +96,19 @@ I apologize, but I'm having trouble accessing my knowledge right now. Please try
 			isLoading = false;
 		}
 	}
+
+	// Function to check current usage
+	async function checkUsage() {
+		try {
+			const response = await fetch("/api/gemini");
+			const data = await response.json();
+			if (data.usage) {
+				usageStats = data.usage;
+			}
+		} catch (error) {
+			console.error("Failed to fetch usage stats:", error);
+		}
+	}
 </script>
 
 <!-- Full height chat interface -->
@@ -98,4 +123,11 @@ I apologize, but I'm having trouble accessing my knowledge right now. Please try
 
 	<!-- Chat Input Component -->
 	<ChatInput disabled={isLoading} on:send={handleSendMessage} />
+
+	<!-- Usage stats in bottom-left corner -->
+	<div
+		class="absolute bottom-23 right-0 z-10 text-xs text-gray-500 bg-white/80 rounded px-2 py-1"
+	>
+		📊 {usageStats.requestCount} requests today
+	</div>
 </div>
