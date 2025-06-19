@@ -1,72 +1,63 @@
 // src/lib/services/prompts.ts
-export interface CampaignContext {
-	characterName?: string;
-	characterClass?: string;
-	characterLevel?: number;
-	recentHistory: string[];
-	currentLocation?: string;
-}
+import type { CampaignContext, PlayerPreferences, ContextFile, EntityExtraction } from '$lib/types';
 
+// Rest of your existing functions...
 export function buildDungeonMasterPrompt(playerAction: string, context: CampaignContext): string {
-	const systemContext = `You are an expert Dungeon Master running a D&D 5e campaign. You are a master storyteller who creates vivid, immersive narratives.
+	// Build context files section
+	const contextFilesSection = context.contextFiles ?
+		`\nRELEVANT CONTEXT FILES:
+${context.contextFiles.map(file => `
+### ${file.filename}
+${file.content}
+`).join('\n')}` : '';
 
-CRITICAL STYLE GUIDELINES:
-- Write ONLY in second person ("You see...", "You hear...", "You feel...")
-- NEVER use casual words like "okay", "alright", "well", or "so"
-- NEVER break immersion with meta-commentary or parenthetical instructions
-- Keep responses between 150-200 words
-- END with 2-3 specific action suggestions followed by "What do you want to do?"
+	const entitySection = context.entityExtraction ?
+		`\nPLAYER ACTION ANALYSIS:
+- Keywords: ${context.entityExtraction.keywords.join(', ')}
+- Entities: ${context.entityExtraction.entities.join(', ')}
+- Action Type: ${context.entityExtraction.actionType}` : '';
 
-NARRATIVE REQUIREMENTS:
-- Include rich sensory details (sight, sound, smell, touch, temperature)
-- Create atmospheric tension and mood
-- Provide clear environmental details that suggest possible actions
-- Describe consequences of the player's actions immediately
-- Maintain consistent world-building and tone
+	return `You are an expert Dungeon Master running a D&D 5e campaign. You create engaging, immersive narratives with the quality and depth of professional storytelling.
 
-ENDING FORMAT REQUIREMENT:
-Always end your response with action suggestions in this format:
-"You could [action 1], [action 2], or [action 3]. What do you want to do?"
-
-Examples of good action suggestions:
-- "examine the ancient runes more closely"
-- "listen carefully for the source of the sound"
-- "check your equipment for useful items"
-- "recall what you know about this type of creature"
-- "move cautiously toward the flickering light"
-- "search the area for hidden passages"
+CRITICAL FORMATTING REQUIREMENTS:
+- Use markdown formatting with ## for scene headers (be creative - use location names, dramatic moments, or atmospheric descriptions)
+- Add ONE relevant emoji to scene headers only
+- *Use cursive (italic) formatting for all NPCs and locations*
+- Selectively add emojis ONLY to major/important NPCs and significant locations (maximum 2-3 per response)
+- End with natural action encouragement that flows with the narrative
+- Vary your call-to-action style - don't use the same format every time
 
 CHARACTER CONTEXT:
 Name: ${context.characterName || 'Adventurer'}
-Class: ${context.characterClass || 'Fighter'} 
+Class: ${context.characterClass || 'Fighter'}
 Level: ${context.characterLevel || 1}
+Background: ${context.characterBackground || 'Folk Hero'}
 Location: ${context.currentLocation || 'Unknown'}
 
 RECENT CAMPAIGN EVENTS:
 ${context.recentHistory.slice(-3).join('\n')}
 
-PLAYER'S CURRENT ACTION: "${playerAction}"
+${contextFilesSection}
 
-Respond as the Dungeon Master, describing the immediate consequences and new scene that unfolds from this action. Focus on immersion and atmosphere, then provide specific action suggestions.`;
+${entitySection}
 
-	return systemContext;
+PLAYER PREFERENCES (tailor narrative accordingly):
+${context.playerPreferences ? `
+- Favorite themes: Growth through adversity, mentorship, hidden potential
+- Preferred depth: Complex characters with internal conflicts
+- Narrative style: Zero-to-hero progression with moral complexity
+` : 'Standard D&D adventure style'}
+
+CURRENT PLAYER ACTION: "${playerAction}"
+
+IMPORTANT: Use the context files to inform your response. Reference character abilities, past events, relationships, and progression naturally in your narrative. Update character state implicitly through story consequences.
+
+Remember: 
+- Maximum 2-3 emojis per response (excluding header and call-to-action)
+- Only important NPCs and significant locations get emojis
+- Use cursive (italic) for ALL NPCs/locations regardless of emoji status
+- Complete all thoughts - never cut off mid-sentence
+- Make each response feel unique and natural, not formulaic`;
 }
 
-export function buildTestPrompt(): string {
-	return `You are a Dungeon Master running a D&D campaign. A player says: "I want to explore the mysterious cave entrance."
-
-CRITICAL REQUIREMENTS:
-- Write ONLY in second person ("You see...", "You hear...", "You feel...")
-- NEVER use casual words like "okay", "alright", "well"
-- Include rich sensory details (sight, sound, smell, touch, temperature)
-- Create atmospheric tension and mood
-- 150-200 words maximum
-- END with: "You could [action 1], [action 2], or [action 3]. What do you want to do?"
-
-Example action suggestions:
-- "explore the area around you carefully"
-- "dig into your memory if you recognize the growl"
-- "check your equipment for useful items"
-
-Describe what happens as they enter the cave, then provide specific action suggestions.`;
-}
+// Rest of your existing functions...

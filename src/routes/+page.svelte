@@ -2,12 +2,13 @@
 	import { ChatDisplay, ChatInput } from "$lib/components/chat";
 	import { campaignStore } from "$lib/stores/campaigns";
 	import { SettingsButton } from "$lib/components/ui";
-	import { geminiService } from "$lib/services/gemini";
 	import { buildDungeonMasterPrompt } from "$lib/services/prompts";
+	import { contextManager } from "$lib/services/context";
+	import ContextTester from "$lib/components/debug/ContextTester.svelte";
 	import type { Message } from "$lib/components/chat";
 
 	let isLoading = false;
-	let usageStats = { requestCount: 0, estimatedTokens: 0, responseTime: 0 };
+	let showContextTester = false;
 
 	// Reactive statement to get current campaign messages
 	$: activeCampaign = $campaignStore.campaigns.find(
@@ -24,110 +25,137 @@
 			content: messageContent,
 		});
 
-		// Set loading state
 		isLoading = true;
 
 		try {
-			// Check if Gemini API is available
-			if (!(await geminiService.isAvailable())) {
-				throw new Error(
-					"Gemini API not available. Check your API key configuration.",
-				);
+			// Build campaign history for context
+			const campaignHistory = messages.map(
+				(m) => `${m.type}: ${m.content}`,
+			);
+
+			// Get character data
+			const character = {
+				name: activeCampaign?.characterName || "Adventurer",
+				class: activeCampaign?.characterClass || "Fighter",
+				level: activeCampaign?.characterLevel || 1,
+				background: activeCampaign?.characterBackground || "Folk Hero",
+			};
+
+			// Get player preferences
+			const playerPreferences = activeCampaign?.playerPreferences || {
+				favoriteGenres: [
+					"Zero-to-hero",
+					"Character growth",
+					"Mentorship",
+				],
+				preferredNarrativeStyle:
+					"Deep character development with moral complexity",
+				preferredThemes: [
+					"Growth through adversity",
+					"Finding purpose",
+				],
+			};
+
+			// ✅ CORRECT - Await the async context building
+			const context = await contextManager.buildFullContext(
+				messageContent,
+				campaignHistory,
+				character,
+				playerPreferences,
+			);
+
+			// Generate AI response using enhanced context
+			const prompt = buildDungeonMasterPrompt(messageContent, context);
+			console.log("Sending context-enhanced prompt to Gemini...");
+
+			const response = await fetch("/api/gemini", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ prompt }),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "API request failed");
 			}
 
-			// Build context from campaign history
-			const context = {
-				characterName: "Adventurer", // Will be dynamic later
-				characterClass: "Fighter",
-				characterLevel: 1,
-				recentHistory: messages
-					.slice(-5)
-					.map(
-						(m) =>
-							`${m.type === "user" ? "Player" : "DM"}: ${m.content}`,
-					),
-				currentLocation: "Starting Village",
-			};
-
-			// Generate AI response using Gemini
-			const prompt = buildDungeonMasterPrompt(messageContent, context);
-			console.log(
-				"Sending prompt to Gemini:",
-				prompt.substring(0, 200) + "...",
-			);
-
-			const startTime = Date.now();
-			const aiResponse = await geminiService.generateResponse(prompt);
-			const responseTime = Date.now() - startTime;
-
-			console.log(
-				"Received response from Gemini:",
-				aiResponse.substring(0, 100) + "...",
-			);
-
-			// Update usage stats (estimated values since geminiService doesn't return usage data)
-			usageStats = {
-				requestCount: usageStats.requestCount + 1,
-				estimatedTokens:
-					usageStats.estimatedTokens + Math.ceil(prompt.length / 4), // Rough token estimation
-				responseTime: responseTime,
-			};
+			const data = await response.json();
 
 			// Add AI response to store
 			campaignStore.addMessage({
 				type: "assistant",
-				content: aiResponse,
+				content: data.response,
 			});
-		} catch (error) {
-			console.error("Gemini API Error:", error);
 
-			// Fallback response with error info
+			// ✅ Update character progression after successful response
+			await contextManager.updateCharacterProgression(
+				messageContent,
+				data.response,
+			);
+		} catch (error) {
+			console.error("Enhanced Gemini API Error:", error);
+
+			// Enhanced fallback response
 			campaignStore.addMessage({
 				type: "assistant",
-				content: `*The Dungeon Master seems momentarily distracted by otherworldly forces...*
+				content: `## **The Weary Traveler Tavern - Evening** 🌙
 
-I apologize, but I'm having trouble accessing my knowledge right now. Please try again in a moment.
+*The Dungeon Master seems momentarily distracted by otherworldly forces...*
 
-**Error**: ${error instanceof Error ? error.message : String(error)}
+The candlelight flickers strangely as an unseen magical disturbance ripples through the tavern. You notice the other patrons pause their conversations, sensing something amiss in the air.
 
-*In the meantime, you notice your surroundings more clearly...*`,
+*Old Henrik* looks concerned. "Did you feel that, lad? Something's not right tonight..."
+
+Your rogue instincts suggest waiting for the disturbance to pass, investigating the source of the magical interference, or asking *Henrik* if he's experienced this before.
+
+*Error: ${error instanceof Error ? error.message : "An unknown error occurred"}*
+
+What's your move? 🎯`,
 			});
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	// Function to check current usage
-	async function checkUsage() {
-		try {
-			const response = await fetch("/api/gemini");
-			const data = await response.json();
-			if (data.usage) {
-				usageStats = data.usage;
-			}
-		} catch (error) {
-			console.error("Failed to fetch usage stats:", error);
-		}
+	function toggleContextTester() {
+		showContextTester = !showContextTester;
 	}
 </script>
 
 <!-- Full height chat interface -->
 <div class="h-full flex flex-col relative">
-	<!-- Settings button positioned in top-right corner -->
-	<div class="absolute top-4 right-4 z-10">
+	<!-- Settings and Debug buttons in top-right corner -->
+	<div class="absolute top-4 right-4 z-10 flex space-x-2">
+		<button
+			onclick={toggleContextTester}
+			class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+			aria-label="Toggle Context Tester"
+		>
+			🧪
+		</button>
 		<SettingsButton />
 	</div>
+
+	{#if showContextTester}
+		<!-- Context Tester Overlay -->
+		<div
+			class="absolute inset-0 bg-black bg-opacity-50 z-20 flex items-center justify-center p-4"
+		>
+			<div class="relative">
+				<button
+					onclick={toggleContextTester}
+					class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+				>
+					×
+				</button>
+				<ContextTester />
+			</div>
+		</div>
+	{/if}
 
 	<!-- Chat Display Component -->
 	<ChatDisplay {messages} {isLoading} />
 
 	<!-- Chat Input Component -->
 	<ChatInput disabled={isLoading} on:send={handleSendMessage} />
-
-	<!-- Usage stats in bottom-left corner -->
-	<div
-		class="absolute bottom-23 right-0 z-10 text-xs text-gray-500 bg-white/80 rounded px-2 py-1"
-	>
-		📊 {usageStats.requestCount} requests today
-	</div>
 </div>

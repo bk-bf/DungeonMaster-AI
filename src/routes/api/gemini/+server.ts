@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				temperature: 0.7,
 				topP: 0.8,
 				topK: 40,
-				maxOutputTokens: 300,
+				maxOutputTokens: 800,
 			}
 		});
 

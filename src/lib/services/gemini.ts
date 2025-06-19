@@ -54,14 +54,66 @@ class GeminiService {
 	}
 
 	private cleanResponse(rawResponse: string): string {
-		// Clean up the response for D&D context
-		let cleaned = rawResponse
-			.trim()
-			.replace(/\*\*(.*?)\*\*/g, '**$1**') // Preserve markdown bold
-			.replace(/^\*\s+/gm, '- ') // Convert asterisk lists to markdown
-			.replace(/\n{3,}/g, '\n\n'); // Normalize excessive line breaks
+		let cleaned = rawResponse.trim();
+
+		// Check if response was cut off mid-sentence
+		if (!this.isCompleteResponse(cleaned)) {
+			console.warn('Response appears to be cut off, may need higher token limit');
+		}
+
+
+		// Remove forbidden phrases
+		//cleaned = cleaned.replace(/What's your move\?\s*🎯?\s*$/gm, '');
+
+
+		// Remove trailing emojis if they're orphaned
+		//cleaned = cleaned.replace(/\s*🎯\s*$/, '');
+
+		// Remove AI disclaimers and meta-commentary
+		cleaned = cleaned.replace(/^(As an AI|I'm an AI|I am an AI).*?\n/gm, '');
+		cleaned = cleaned.replace(/\(.*?Note:.*?\)/g, '');
+		cleaned = cleaned.replace(/\*\*Note:.*?\*\*/g, '');
+
+		// Fix common formatting issues
+		cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '**$1**'); // Preserve markdown bold
+		cleaned = cleaned.replace(/^\*\s+/gm, '- '); // Convert asterisk lists to markdown
+		cleaned = cleaned.replace(/\n{3,}/g, '\n\n'); // Normalize line breaks
+
+		// Ensure proper D&D formatting
+		if (!cleaned.includes('##')) {
+			cleaned = `## **Current Scene** 🏰\n\n${cleaned}`;
+		}
 
 		return cleaned;
+	}
+
+	private isCompleteResponse(response: string): boolean {
+		// Check for common signs of incomplete responses
+		const incompletePatterns = [
+			/\d+$/, // Ends with a number (like "about 10")
+			/\w+\s*$/, // Ends abruptly mid-word
+			/,\s*$/, // Ends with comma
+			/\.\.\.$/, // Ends with ellipsis
+		];
+
+		const hasCallToAction = response.includes('🎯') ||
+			response.includes('What\'s your') ||
+			response.includes('How do you') ||
+			response.includes('choice');
+
+		const seemsIncomplete = incompletePatterns.some(pattern => pattern.test(response));
+
+		return hasCallToAction && !seemsIncomplete;
+	}
+
+	private validateDnDResponse(response: string): boolean {
+		// Check for required D&D elements
+		const hasLocationHeader = /## \*\*.*?\*\*/.test(response);
+		const hasActionPrompt = response.includes('What would you like') || response.includes('You can:');
+		const hasCallToAction = response.includes('What\'s your move?');
+		const hasEmojis = /[\u{1F300}-\u{1F9FF}]/u.test(response);
+
+		return hasLocationHeader && hasActionPrompt && hasCallToAction && hasEmojis;
 	}
 
 	async isAvailable(): Promise<boolean> {
