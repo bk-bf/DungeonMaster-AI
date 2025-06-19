@@ -54,15 +54,15 @@
                         </div>
                     </div>
 
-                    <!-- Message content with markdown support -->
+                    <!-- Message bubble content with markdown support -->
                     <div class="flex-1">
                         <div class="text-sm text-gray-500 mb-1">
                             {message.type === "user" ? "You" : "Dungeon Master"}
                         </div>
                         <div
                             class="bg-{message.type === 'user'
-                                ? 'gray'
-                                : 'gray'}-200 rounded-lg p-3"
+                                ? 'white'
+                                : 'white'}-200 rounded-lg p-3"
                         >
                             <!-- Render markdown content -->
                             <div class="markdown-content">

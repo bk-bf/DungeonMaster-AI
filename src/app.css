@@ -133,3 +133,35 @@
 .markdown-content>*:first-child {
     margin-top: 0 !important;
 }
+
+/* Fix for missing list bullets */
+.markdown-content ul {
+    @apply mb-3 pl-5 last:mb-0;
+    list-style-type: disc;
+    /* Ensure bullets appear */
+    list-style-position: outside;
+    /* Position bullets outside the content */
+}
+
+.markdown-content ol {
+    @apply mb-3 pl-5 last:mb-0;
+    list-style-type: decimal;
+    /* Ensure numbers appear */
+    list-style-position: outside;
+}
+
+.markdown-content li {
+    @apply mb-1;
+    display: list-item;
+    /* Ensure list item display */
+}
+
+/* Nested list styling */
+.markdown-content ul ul {
+    list-style-type: circle;
+    margin-top: 0.25rem;
+}
+
+.markdown-content ul ul ul {
+    list-style-type: square;
+}

@@ -42,7 +42,7 @@
         <textarea
             bind:value={messageText}
             {placeholder}
-            class="w-full resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-red-700 max-h-32 overflow-y-auto"
+            class="w-full resize-none border border-gray-300 rounded-3xl px-4 py-3 pr-12 focus:outline-none focus:ring-1 focus:ring-red-700 focus:border-red-700 max-h-32 overflow-y-auto"
             rows="1"
             onkeydown={handleKeydown}
             oninput={handleInput}
@@ -53,7 +53,7 @@
                 type="button"
                 onclick={sendMessage}
                 disabled={!messageText.trim()}
-                class="bg-red-800 text-white w-9 h-9 rounded-md hover:bg-red-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                class="bg-red-800 text-white w-9 h-9 rounded-3xl hover:bg-red-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 aria-label="Send message"
             >
                 <svg

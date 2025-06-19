@@ -58,7 +58,7 @@
         <button
             type="button"
             onclick={createNewCampaign}
-            class="w-full flex items-center justify-center px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-700 focus:outline-none transition-colors"
+            class="w-full flex items-center justify-center px-2 py-2 bg-red-800 text-white rounded-lg hover:bg-red-700 focus:outline-none transition-colors"
         >
             <svg
                 class="mr-2 w-4 h-4"

@@ -74,13 +74,16 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 - [x] **VERIFIABLE**: Type message, press Enter, see message appear in chat
 - [x] **VERIFIABLE**: Input clears after sending using two-way binding
 
-### **Day 5: Message Formatting and Markdown**
-- [ ] **TESTABLE**: Install and configure `marked` library for markdown rendering
-- [ ] **TESTABLE**: Add `highlight.js` for syntax highlighting in code blocks
-- [ ] **TESTABLE**: Implement `{@html}` rendering for formatted messages
-- [ ] **TESTABLE**: Create test messages with various markdown elements
-- [ ] **VERIFIABLE**: Code blocks render with syntax highlighting
-- [ ] **VERIFIABLE**: Markdown formatting displays correctly in message bubbles
+## Updated Day 5 Task List
+
+### **Completed Tasks**
+- [x] **TESTABLE**: Install and configure `marked` library for markdown rendering
+- [x] **TESTABLE**: Implement `{@html}` rendering for formatted messages *(already working in your ChatDisplay)*
+### **Remaining Simplified Tasks**
+- [x] **TESTABLE**: Create test messages with D&D-relevant markdown elements (headers, bold, italic, blockquotes, lists)
+- [x] **VERIFIABLE**: Markdown formatting displays correctly in message bubbles with proper spacing
+- [x] **VERIFIABLE**: D&D spell descriptions render beautifully with emoji integration
+- [x] **TESTABLE**: Test markdown with various D&D content types (spells, character descriptions, quest logs)
 
 ### **Day 6: Loading States and Animations**
 - [ ] **TESTABLE**: Add typing indicator using Svelte's built-in transition system

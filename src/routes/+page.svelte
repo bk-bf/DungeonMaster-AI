@@ -22,8 +22,13 @@
 		},
 		{
 			id: 4,
+			type: "user",
+			content: "//Fireball",
+		},
+		{
+			id: 5,
 			type: "assistant",
-			content: `## 🔥 Spell: Fireball
+			content: `## 📜 Spell: Fireball
 
 🎲 **Level:** 3rd  
 📚 **School:** Evocation  
@@ -34,9 +39,9 @@
 🛡️ **Attack/Save:** DEX Save  
 💥 **Damage/Effect:** 🔥 Fire  
 
-*A bright streak flashes from your pointing finger 👉 to a point you choose within range and then blossoms with a low roar into an explosion of flame 💥. Each creature in a 20-foot-radius sphere centered on that point must make a Dexterity saving throw 🛡️. A target takes 8d6 fire damage 🔥 on a failed save, or half as much damage on a successful one.*
+*A bright streak flashes from your pointing finger  to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.*
 
-*The fire spreads around corners 🔥. It ignites flammable objects 🔥 in the area that aren't being worn or carried.*
+*The fire spreads around corners. It ignites flammable objects in the area that aren't being worn or carried.*
 
 ⬆️ **At Higher Levels.** When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd.
 
@@ -44,9 +49,59 @@
 🔥 8d6 fire damage`,
 		},
 		{
-			id: 5,
+			id: 6,
+			type: "assistant",
+			content: `Your enhanced Fireball spell with emojis`, // (the one you just created,
+		},
+		{
+			id: 7,
 			type: "user",
-			content: "Cast Fireball at the goblins!",
+			content: `//Aldric the Bold`, // (the one you just created,
+		},
+		{
+			id: 8,
+			type: "assistant",
+			content: `## Character: Aldric the Bold
+
+**Race:** Human  
+**Class:** Fighter  
+**Level:** 3  
+
+*A weathered warrior with scars telling tales of countless battles...*
+
+### Equipment
+- Longsword +1
+- Chain mail armor
+- Shield with family crest
+- 50 gold pieces`,
+		},
+		{
+			id: 9,
+			type: "user",
+			content: `//Quests`, // (the one you just created,
+		},
+		{
+			id: 10,
+			type: "assistant",
+			content: `# 📜 Current Quests
+
+## 🏰 Main Quest: The Dragon's Hoard
+**Objective:** Retrieve the stolen crown from the ancient dragon's lair  
+**Reward:** 1000 gold pieces  
+**Status:** *In Progress*
+
+## 🌲 Side Quest: Lost in the Woods
+### Objectives:
+- Find the missing merchant caravan
+- Rescue any survivors  
+- Return valuable cargo to town
+
+### Rewards:
+1. 200 gold pieces
+2. Merchant's favor
+3. Safe passage through the forest
+
+*The forest grows darker as you venture deeper...*`,
 		},
 	];
 
