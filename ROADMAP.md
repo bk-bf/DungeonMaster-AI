@@ -59,7 +59,7 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 - [x] **VERIFIABLE**: Layout remains responsive on mobile/desktop screen sizes
 
 ### **Day 3: Chat Message Display Component**
-- [ ] **TESTABLE**: Create `ChatDisplay.svelte` with scrollable message container
+- [x] **TESTABLE**: Create `ChatDisplay.svelte` with scrollable message container
 - [x] **TESTABLE**: Implement user/assistant message bubbles with distinct Tailwind styling
 - [x] **TESTABLE**: Add avatar components for user and AI messages
 - [x] **TESTABLE**: Display hardcoded sample conversation using `{#each}` blocks
@@ -67,7 +67,7 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 - [x] **VERIFIABLE**: Auto-scroll behavior works using `bind:this` and `afterUpdate`
 
 ### **Day 4: Message Input Interface**
-- [ ] **TESTABLE**: Create `ChatInput.svelte` with auto-resizing textarea
+- [x] **TESTABLE**: Create `ChatInput.svelte` with auto-resizing textarea
 - [x] **TESTABLE**: Add send button with proper hover/disabled states using Svelte class directives
 - [x] **TESTABLE**: Implement keyboard shortcuts using `on:keydown` event handlers
 - [x] **TESTABLE**: Connect input to message store using Svelte's reactive statements
@@ -91,7 +91,7 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 - [ ] **VERIFIABLE**: Messages auto-scroll with smooth animation
 
 ### **Day 7: Sidebar Chat History**
-- [ ] **TESTABLE**: Create `ChatHistory.svelte` component with conversation list
+- [x] **TESTABLE**: Create `ChatHistory.svelte` component with conversation list
 - [ ] **TESTABLE**: Implement new chat functionality using Svelte stores
 - [ ] **TESTABLE**: Add chat selection using reactive store subscriptions
 - [ ] **TESTABLE**: Create chat rename and delete functionality with store updates

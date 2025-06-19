@@ -93,6 +93,10 @@
                         ? 'bg-red-100 text-gray-900'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}"
                     onclick={() => selectCampaign(campaign.id)}
+                    onkeydown={(e) =>
+                        e.key === "Enter" && selectCampaign(campaign.id)}
+                    role="button"
+                    tabindex="0"
                 >
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center space-x-2">

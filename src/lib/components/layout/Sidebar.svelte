@@ -52,7 +52,7 @@
 
 <!-- Sidebar with integrated title -->
 <aside class="h-full bg-white border-r border-gray-200 flex flex-col">
-	<!-- Sidebar header with DragonMaster AI branding -->
+	<!-- Sidebar header with DungeonMaster AI branding -->
 	<div class="flex items-center justify-between p-4 border-b border-gray-200">
 		<div class="flex items-center space-x-2">
 			<!-- Dragon icon -->
@@ -61,11 +61,13 @@
 			>
 				<img
 					src="/dragon-logo.png"
-					alt="DragonMaster AI Logo"
+					alt="DungeonMaster AI Logo"
 					class="w-8 h-8 object-cover"
 				/>
 			</div>
-			<h1 class="text-lg font-semibold text-gray-900">DragonMaster AI</h1>
+			<h1 class="text-lg font-semibold text-gray-900">
+				DungeonMaster AI
+			</h1>
 		</div>
 
 		<!-- Mobile close button -->

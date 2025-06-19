@@ -3,7 +3,7 @@
 	import { Sidebar } from "$lib/components/layout";
 
 	let sidebarOpen = true;
-	let sidebarWidth = 320; // Default width in pixels
+	let sidebarWidth = 270; // Default width in pixels
 	let isResizing = false;
 	let startX = 0;
 	let startWidth = 0;

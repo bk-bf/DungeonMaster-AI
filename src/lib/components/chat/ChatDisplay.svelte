@@ -59,8 +59,8 @@
                         </div>
                         <div
                             class="bg-{message.type === 'user'
-                                ? 'white'
-                                : 'gray'}-100 rounded-lg p-3"
+                                ? 'gray'
+                                : 'gray'}-200 rounded-lg p-3"
                         >
                             <p class="text-gray-800">{message.content}</p>
                         </div>
