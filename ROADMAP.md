@@ -86,20 +86,20 @@ Build immediately testable chat interface replicating Open WebUI functionality u
 - [x] **TESTABLE**: Test markdown with various D&D content types (spells, character descriptions, quest logs)
 
 ### **Day 6: Loading States and Animations**
-- [ ] **TESTABLE**: Add typing indicator using Svelte's built-in transition system
+- [-] **TESTABLE**: Add typing indicator using Svelte's built-in transition system
 - [x] **TESTABLE**: Implement message loading states with `{#if}` conditional rendering
-- [ ] **TESTABLE**: Add smooth scroll animations using Svelte transitions
-- [ ] **TESTABLE**: Create button loading states with reactive class binding
-- [ ] **VERIFIABLE**: Typing indicator appears with smooth fade-in transition
-- [ ] **VERIFIABLE**: Messages auto-scroll with smooth animation
+- [-] **TESTABLE**: Add smooth scroll animations using Svelte transitions
+- [-] **TESTABLE**: Create button loading states with reactive class binding
+- [-] **VERIFIABLE**: Typing indicator appears with smooth fade-in transition
+- [-] **VERIFIABLE**: Messages auto-scroll with smooth animation
 
 ### **Day 7: Sidebar Chat History**
 - [x] **TESTABLE**: Create `ChatHistory.svelte` component with conversation list
-- [ ] **TESTABLE**: Implement new chat functionality using Svelte stores
-- [ ] **TESTABLE**: Add chat selection using reactive store subscriptions
-- [ ] **TESTABLE**: Create chat rename and delete functionality with store updates
-- [ ] **VERIFIABLE**: Click "New Chat" creates empty conversation in store
-- [ ] **VERIFIABLE**: Switch between different chat histories updates main view
+- [x] **TESTABLE**: Implement new chat functionality using Svelte stores
+- [x] **TESTABLE**: Add chat selection using reactive store subscriptions
+- [x] **TESTABLE**: Create chat rename and delete functionality with store updates
+- [x] **VERIFIABLE**: Click "New Chat" creates empty conversation in store
+- [x] **VERIFIABLE**: Switch between different chat histories updates main view
 
 ### **Day 8: Theme System Implementation**
 - [ ] **TESTABLE**: Create theme store using Svelte's writable store

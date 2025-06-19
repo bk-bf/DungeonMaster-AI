@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChatHistory } from "$lib/components/chat";
-	import type { Campaign } from "$lib/components/chat";
+	import { campaignStore } from "$lib/stores/campaigns";
 
 	interface Props {
 		isOpen?: boolean;
@@ -9,44 +9,9 @@
 
 	let { isOpen = true, onClose }: Props = $props();
 
-	let campaigns: Campaign[] = [
-		{
-			id: "1",
-			name: "The Whispering Woods",
-			lastMessage: "You step into the forest...",
-			timestamp: new Date(),
-		},
-		{
-			id: "2",
-			name: "Dragon's Lair Quest",
-			lastMessage: "The dragon roars...",
-			timestamp: new Date(Date.now() - 86400000),
-		},
-	];
-
-	let activeCampaignId = "1";
-
-	function handleSelectCampaign(event: CustomEvent<string>) {
-		activeCampaignId = event.detail;
-		console.log("Selected campaign:", event.detail);
-	}
-
-	function handleNewCampaign() {
-		const newCampaign: Campaign = {
-			id: Date.now().toString(),
-			name: `New Campaign ${campaigns.length + 1}`,
-			timestamp: new Date(),
-		};
-		campaigns = [newCampaign, ...campaigns];
-		activeCampaignId = newCampaign.id;
-	}
-
-	function handleDeleteCampaign(event: CustomEvent<string>) {
-		const campaignId = event.detail;
-		campaigns = campaigns.filter((c) => c.id !== campaignId);
-		if (activeCampaignId === campaignId && campaigns.length > 0) {
-			activeCampaignId = campaigns[0].id;
-		}
+	function handleCampaignSelected(event: CustomEvent<string>) {
+		// Campaign selection is handled by the store
+		console.log("Campaign selected:", event.detail);
 	}
 </script>
 
@@ -93,12 +58,6 @@
 		</button>
 	</div>
 
-	<!-- Chat History Component -->
-	<ChatHistory
-		{campaigns}
-		{activeCampaignId}
-		on:selectCampaign={handleSelectCampaign}
-		on:newCampaign={handleNewCampaign}
-		on:deleteCampaign={handleDeleteCampaign}
-	/>
+	<!-- Chat History Component with Store Integration -->
+	<ChatHistory on:campaignSelected={handleCampaignSelected} />
 </aside>
