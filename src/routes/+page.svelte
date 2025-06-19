@@ -2,6 +2,9 @@
 	import { ChatDisplay, ChatInput } from "$lib/components/chat";
 	import { campaignStore } from "$lib/stores/campaigns";
 	import { SettingsButton } from "$lib/components/ui";
+	import { geminiService } from "$lib/services/gemini";
+	import { buildDungeonMasterPrompt } from "$lib/services/prompts";
+	import type { Message } from "$lib/components/chat";
 
 	let isLoading = false;
 
@@ -11,7 +14,7 @@
 	);
 	$: messages = activeCampaign?.messages || [];
 
-	function handleSendMessage(event: CustomEvent<string>) {
+	async function handleSendMessage(event: CustomEvent<string>) {
 		const messageContent = event.detail;
 
 		// Add user message to store
@@ -23,14 +26,63 @@
 		// Set loading state
 		isLoading = true;
 
-		// Simulate AI response
-		setTimeout(() => {
+		try {
+			// Check if Gemini API is available
+			if (!(await geminiService.isAvailable())) {
+				throw new Error(
+					"Gemini API not available. Check your API key configuration.",
+				);
+			}
+
+			// Build context from campaign history
+			const context = {
+				characterName: "Adventurer", // Will be dynamic later
+				characterClass: "Fighter",
+				characterLevel: 1,
+				recentHistory: messages
+					.slice(-5)
+					.map(
+						(m) =>
+							`${m.type === "user" ? "Player" : "DM"}: ${m.content}`,
+					),
+				currentLocation: "Starting Village",
+			};
+
+			// Generate AI response using Gemini
+			const prompt = buildDungeonMasterPrompt(messageContent, context);
+			console.log(
+				"Sending prompt to Gemini:",
+				prompt.substring(0, 200) + "...",
+			);
+
+			const aiResponse = await geminiService.generateResponse(prompt);
+			console.log(
+				"Received response from Gemini:",
+				aiResponse.substring(0, 100) + "...",
+			);
+
+			// Add AI response to store
 			campaignStore.addMessage({
 				type: "assistant",
-				content: `You said: "${messageContent}". The adventure continues...`,
+				content: aiResponse,
 			});
+		} catch (error) {
+			console.error("Gemini API Error:", error);
+
+			// Fallback response with error info
+			campaignStore.addMessage({
+				type: "assistant",
+				content: `*The Dungeon Master seems momentarily distracted by otherworldly forces...*
+
+I apologize, but I'm having trouble accessing my knowledge right now. Please try again in a moment.
+
+**Error**: ${error instanceof Error ? error.message : String(error)}
+
+*In the meantime, you notice your surroundings more clearly...*`,
+			});
+		} finally {
 			isLoading = false;
-		}, 1000);
+		}
 	}
 </script>
 

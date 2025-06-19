@@ -13,10 +13,10 @@
 ### **Day 11: Google Gemini API Setup**
 **Flow Focus**: **Narrative Generation** + **Context Retrieval** foundation
 
-- [ ] **TESTABLE**: Set up Google AI Studio account and generate API key
-- [ ] **TESTABLE**: Install Google Generative AI SDK with npm install @google/generative-ai
-- [ ] **TESTABLE**: Create Gemini service module with API integration
-- [ ] **TESTABLE**: Replace mock AI responses with actual Gemini API calls in chat interface
+- [x] **TESTABLE**: Set up Google AI Studio account and generate API key 
+- [x] **TESTABLE**: Install Google Generative AI SDK with npm install @google/generative-ai
+- [x] **TESTABLE**: Create Gemini service module with API integration
+- [x] **TESTABLE**: Replace mock AI responses with actual Gemini API calls in chat interface
 - [ ] **VERIFIABLE**: AI generates coherent responses to basic D&D prompts
 - [ ] **VERIFIABLE**: Response times under 5 seconds with API calls
 
