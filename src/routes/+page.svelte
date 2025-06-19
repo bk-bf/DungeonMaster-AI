@@ -8,16 +8,20 @@
 	import { contextFileManager } from "$lib/services/contextFiles";
 	import CharacterSetup from "$lib/components/character/CharacterSetup.svelte";
 	import ContextTester from "$lib/components/debug/ContextTester.svelte";
+	import { sessionManager } from "$lib/services/session";
 
+	let showCharacterSetup = false;
 	let isLoading = false;
 	let showContextTester = false;
-	let showCharacterSetup = false;
 
 	// Check if character setup is needed
 	$: {
 		const files = contextFileManager.getAllFiles();
 		const hasCharacterSheet = files.some((f) => f.id === "character_sheet");
-		showCharacterSetup = !hasCharacterSheet;
+		const hasActiveSession = sessionManager.hasActiveSession();
+
+		// Only show character setup if no character sheet AND no active session
+		showCharacterSetup = !hasCharacterSheet && !hasActiveSession;
 	}
 
 	// Your existing reactive statements and functions...

@@ -5,6 +5,51 @@ import type { ContextFile, EntityExtraction, PlayerPreferences } from '$lib/type
 class ContextFileManager {
 	private files: Map<string, ContextFile> = new Map();
 
+	deleteFile(fileId: string) {
+		this.files.delete(fileId);
+		this.saveToStorage();
+	}
+
+	// Import character data from JSON
+	async importCharacterData(jsonData: any): Promise<boolean> {
+		try {
+			if (jsonData.contextFiles && Array.isArray(jsonData.contextFiles)) {
+				// Clear existing files
+				this.files.clear();
+
+				// Import context files
+				jsonData.contextFiles.forEach((file: any) => {
+					this.files.set(file.id, {
+						...file,
+						lastUpdated: new Date(file.lastUpdated)
+					});
+				});
+
+				this.saveToStorage();
+				return true;
+			}
+			return false;
+		} catch (error) {
+			console.error('Failed to import character data:', error);
+			return false;
+		}
+	}
+
+	// Import campaign data
+	async importCampaignData(jsonData: any): Promise<any> {
+		try {
+			if (jsonData.campaign) {
+				return {
+					campaign: jsonData.campaign,
+					playerPreferences: jsonData.playerPreferences || null
+				};
+			}
+			return null;
+		} catch (error) {
+			console.error('Failed to import campaign data:', error);
+			return null;
+		}
+	}
 	// ✅ FIX: Accept actual character data instead of hardcoded values
 	async initializeCharacterFiles(characterName: string, characterClass: string = 'Fighter', characterBackground: string = 'Folk Hero') {
 		const defaultFiles: ContextFile[] = [
@@ -57,6 +102,7 @@ class ContextFileManager {
 				priority: 8
 			}
 		];
+
 
 		defaultFiles.forEach(file => {
 			this.files.set(file.id, file);

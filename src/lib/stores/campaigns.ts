@@ -1,5 +1,7 @@
 // src/lib/stores/campaigns.ts
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
+import { browser } from '$app/environment';
+import { sessionManager } from '$lib/services/session';
 import type { Campaign, Message, PlayerPreferences } from '$lib/types';
 
 interface CampaignStore {
@@ -7,32 +9,59 @@ interface CampaignStore {
 	activeCampaignId: string | null;
 }
 
-const defaultStore: CampaignStore = {
-	campaigns: [
-		{
-			id: '1',
-			name: 'The Whispering Woods',
-			messages: [
-				{ id: 1, type: 'assistant', content: 'Welcome to your **D&D adventure**! I am your AI Dungeon Master. What would you like to do?' }
-			],
-			lastMessage: 'Welcome to your D&D adventure!',
-			timestamp: new Date(),
-			isActive: true
-		}
-	],
-	activeCampaignId: '1'
-};
+// Create persisted store that survives browser sessions
+function createPersistedCampaignStore() {
+	// Load from session first, then localStorage
+	let initial: CampaignStore;
 
-function createCampaignStore() {
-	const { subscribe, set, update } = writable<CampaignStore>(defaultStore);
+	if (browser) {
+		const sessionData = sessionManager.loadSession();
+		const stored = localStorage.getItem('dungeonmaster-campaigns');
+
+		if (sessionData && stored) {
+			const campaigns = JSON.parse(stored);
+			initial = {
+				campaigns: campaigns.campaigns || [],
+				activeCampaignId: sessionData.activeCampaignId || campaigns.activeCampaignId
+			};
+		} else {
+			initial = { campaigns: [], activeCampaignId: null };
+		}
+	} else {
+		initial = { campaigns: [], activeCampaignId: null };
+	}
+
+	const { subscribe, set, update } = writable<CampaignStore>(initial);
+	// Subscribe to changes and persist to localStorage
+	if (browser) {
+		subscribe((value) => {
+			localStorage.setItem('dungeonmaster-campaigns', JSON.stringify(value));
+
+			// Update session with current state
+			const activeCampaign = value.campaigns.find(c => c.id === value.activeCampaignId);
+			if (activeCampaign) {
+				sessionManager.saveSession({
+					characterName: activeCampaign.characterName,
+					characterClass: activeCampaign.characterClass,
+					characterLevel: activeCampaign.characterLevel,
+					characterBackground: activeCampaign.characterBackground,
+					playerPreferences: activeCampaign.playerPreferences,
+					activeCampaignId: value.activeCampaignId ?? undefined,
+					lastActivity: new Date().toISOString()
+				});
+			}
+		});
+	}
 
 	return {
 		subscribe,
+		set,
+		update,
 
 		// Create new campaign
 		createCampaign: (name: string) => {
 			const newCampaign: Campaign = {
-				id: Date.now().toString(),
+				id: crypto.randomUUID(),
 				name: name || `New Campaign ${Date.now()}`,
 				messages: [
 					{
@@ -52,6 +81,32 @@ function createCampaignStore() {
 			}));
 
 			return newCampaign.id;
+		},
+
+		// Clear all data and session
+		clearAllData: () => {
+			sessionManager.clearSession();
+			set({ campaigns: [], activeCampaignId: null });
+		},
+
+		// Restore session data
+		restoreFromSession: async () => {
+			try {
+				// Try to load from server cookie first
+				const response = await fetch('/api/session');
+				const data = await response.json();
+
+				if (data.session) {
+					// Session found, restore data
+					return data.session;
+				}
+
+				// Fallback to localStorage session
+				return sessionManager.loadSession();
+			} catch (error) {
+				console.error('Failed to restore session:', error);
+				return sessionManager.loadSession();
+			}
 		},
 
 		// Switch to existing campaign
@@ -149,6 +204,55 @@ function createCampaignStore() {
 			});
 		},
 
+		// Export campaign data
+		exportCampaign: (campaignId?: string) => {
+			const store = get(campaignStore);
+			const targetId = campaignId || store.activeCampaignId;
+			const campaign = store.campaigns.find(c => c.id === targetId);
+
+			if (!campaign) return null;
+
+			const exportData = {
+				campaign,
+				exportDate: new Date().toISOString(),
+				version: '1.0'
+			};
+
+			return JSON.stringify(exportData, null, 2);
+		},
+
+		// Import campaign from JSON
+		importCampaign: (campaignData: any) => {
+			const importedCampaign: Campaign = {
+				...campaignData,
+				id: crypto.randomUUID(), // Generate new ID to avoid conflicts
+				timestamp: new Date(campaignData.timestamp),
+				isActive: true
+			};
+
+			update(store => {
+				// Deactivate other campaigns
+				store.campaigns.forEach(c => c.isActive = false);
+
+				// Add imported campaign
+				store.campaigns.push(importedCampaign);
+				store.activeCampaignId = importedCampaign.id;
+
+				return store;
+			});
+
+			return importedCampaign.id;
+		},
+		// Clear all campaign history
+		clearHistory: () => {
+			set({ campaigns: [], activeCampaignId: null });
+			if (browser) {
+				localStorage.removeItem('dungeonmaster-campaigns');
+				localStorage.removeItem('dungeonmaster-context-files');
+				localStorage.removeItem('dungeonmaster-player-preferences');
+			}
+		},
+
 		// Get active campaign
 		getActiveCampaign: (store: CampaignStore) => {
 			return store.campaigns.find(c => c.id === store.activeCampaignId) || null;
@@ -156,4 +260,4 @@ function createCampaignStore() {
 	};
 }
 
-export const campaignStore = createCampaignStore();
+export const campaignStore = createPersistedCampaignStore();

@@ -53,6 +53,20 @@ function createPlayerPreferencesStore() {
 			return null;
 		},
 
+		// Import preferences from JSON data
+		importPreferences: (preferences: PlayerPreferences) => {
+			const newStore = {
+				preferences,
+				isCollected: true
+			};
+
+			set(newStore);
+
+			if (browser) {
+				localStorage.setItem('dungeonmaster-player-preferences', JSON.stringify(newStore));
+			}
+		},
+
 		// Clear preferences
 		clearPreferences: () => {
 			set(defaultStore);

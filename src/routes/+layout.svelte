@@ -2,27 +2,55 @@
 	import "../app.css";
 	import { Sidebar } from "$lib/components/layout";
 	import { contextFileManager } from "$lib/services/contextFiles";
+	import { campaignStore } from "$lib/stores/campaigns";
+	import { playerPreferencesStore } from "$lib/stores/playerPreferences";
 	import { onMount } from "svelte";
 
 	let sidebarOpen = true;
-	let sidebarWidth = 270; // Default width in pixels
+	let sidebarWidth = 320; // Updated default width
 	let isResizing = false;
 	let startX = 0;
 	let startWidth = 0;
+	let sessionRestored = false;
 
-	// ✅ Initialize context files when app loads
+	// ✅ Enhanced initialization with session restoration
 	onMount(async () => {
-		// Load existing context files from localStorage
-		contextFileManager.loadFromStorage();
+		try {
+			// Try to restore session from cookie/localStorage
+			const sessionData = await campaignStore.restoreFromSession();
 
-		// Check if character sheet exists
-		const existingFiles = contextFileManager.getAllFiles();
-		const hasCharacterSheet = existingFiles.some(
-			(f) => f.id === "character_sheet",
-		);
+			if (sessionData) {
+				console.log("✅ Session restored:", sessionData);
 
-		console.log("Context files loaded:", existingFiles.length, "files");
-		console.log("Has character sheet:", hasCharacterSheet);
+				// Restore player preferences if available
+				if (sessionData.playerPreferences) {
+					playerPreferencesStore.importPreferences(
+						sessionData.playerPreferences,
+					);
+				}
+
+				sessionRestored = true;
+			} else {
+				console.log("ℹ️ No active session found");
+			}
+
+			// Load context files
+			contextFileManager.loadFromStorage();
+
+			// Check if character sheet exists
+			const existingFiles = contextFileManager.getAllFiles();
+			const hasCharacterSheet = existingFiles.some(
+				(f) => f.id === "character_sheet",
+			);
+
+			console.log("Context files loaded:", existingFiles.length, "files");
+			console.log("Has character sheet:", hasCharacterSheet);
+		} catch (error) {
+			console.error("❌ Failed to restore session:", error);
+
+			// Fallback: Still load context files even if session restore fails
+			contextFileManager.loadFromStorage();
+		}
 	});
 
 	function toggleSidebar() {
@@ -54,8 +82,8 @@
 		const newWidth = startWidth + deltaX;
 
 		// Updated constraints: 20% of screen as minimum, 240px as absolute minimum
-		const minWidth = Math.max(240, window.innerWidth * 0.1); // 20% of screen or 240px, whichever is larger
-		const maxWidth = window.innerWidth * 0.2; // Maximum 50% of screen
+		const minWidth = Math.max(240, window.innerWidth * 0.1); // 10% of screen or 240px, whichever is larger
+		const maxWidth = window.innerWidth * 0.5; // Maximum 50% of screen
 
 		sidebarWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
 	}
@@ -79,7 +107,7 @@
 </script>
 
 <!-- Full viewport container without header -->
-<div class="h-screen flex overflow-hidden bg-gray-50">
+<div class="h-screen flex overflow-hidden bg-gray-50 transition-colors">
 	<!-- Resizable Sidebar -->
 	<div
 		class="flex-shrink-0 relative {sidebarOpen
