@@ -115,7 +115,7 @@
 			: 'hidden'} lg:block"
 		style="width: {sidebarWidth}px;"
 	>
-		<Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+		<Sidebar onClose={closeSidebar} />
 
 		<!-- Subtle Resize Handle -->
 		<div
