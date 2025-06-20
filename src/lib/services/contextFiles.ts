@@ -10,6 +10,32 @@ class ContextFileManager {
 		this.saveToStorage();
 	}
 
+	saveFile(file: { id: string; name: string; content: string; type: string; lastModified: Date }) {
+		const contextFile: ContextFile = {
+			id: file.id,
+			filename: `${file.name.toLowerCase().replace(/\s+/g, '_')}.md`,
+			content: file.content,
+			tags: [file.type],
+			lastUpdated: file.lastModified,
+			priority: 5
+		};
+		this.files.set(file.id, contextFile);
+		this.saveToStorage();
+	}
+
+	createFile(id: string, filename: string, content: string): void {
+		const contextFile: ContextFile = {
+			id,
+			filename,
+			content,
+			tags: ['generated'],
+			lastUpdated: new Date(),
+			priority: 5
+		};
+		this.files.set(id, contextFile);
+		this.saveToStorage();
+	}
+
 	// Import character data from JSON
 	async importCharacterData(jsonData: any): Promise<boolean> {
 		try {
@@ -406,5 +432,142 @@ class ContextFileManager {
 			background: backgroundMatch ? backgroundMatch[1].trim() : 'Unknown Background',
 		}
 	}
+
+	// Replace the existing initializeFromCollaborativeData method
+	async initializeFromCollaborativeData(characterSheet: string, collaborativeData: any): Promise<void> {
+		try {
+			console.log('🎭 Initializing context files from collaborative data...');
+
+			// 1. Create character sheet file using createFile method
+			this.createFile('character_sheet', 'character_sheet.md', characterSheet);
+
+			// 2. Create world overview
+			const worldOverview = this.generateWorldOverview(collaborativeData);
+			this.createFile('world_overview', 'world_overview.md', worldOverview);
+
+			// 3. Create campaign notes
+			const campaignNotes = this.generateCampaignNotes(collaborativeData);
+			this.createFile('campaign_notes', 'campaign_notes.md', campaignNotes);
+
+			// 4. Create player preferences file
+			const preferencesContent = this.generatePreferencesContent(collaborativeData.playerPreferences);
+			this.createFile('player_preferences', 'player_preferences.md', preferencesContent);
+
+			// 5. Create initial quest log
+			const questLog = this.generateInitialQuestLog(collaborativeData);
+			this.createFile('quest_log', 'quest_log.md', questLog);
+
+			console.log('✅ Context files initialized successfully!');
+		} catch (error) {
+			console.error('❌ Failed to initialize context files:', error);
+			throw error;
+		}
+	}
+
+	// ✅ HELPER METHODS FOR COLLABORATIVE DATA PROCESSING
+	private generateWorldOverview(collaborativeData: any): string {
+		const { worldElements, characterConcept, backgroundDetails } = collaborativeData;
+
+		return `# World Overview
+	
+	## Setting
+	${worldElements || 'A rich fantasy world waiting to be explored.'}
+	
+	## Character Integration
+	The world has been shaped to accommodate your character's story:
+	- **Character Concept**: ${characterConcept}
+	- **Background Connection**: ${backgroundDetails}
+	
+	## Key Locations
+	*To be developed as the adventure unfolds...*
+	
+	## Important NPCs
+	*To be introduced during gameplay...*
+	
+	## Ongoing Plots
+	*To be revealed through your character's journey...*
+	
+	## Notes
+	This world was collaboratively created to match your character's story and preferences.
+	`;
+	}
+
+	private generateCampaignNotes(collaborativeData: any): string {
+		const { characterConcept, backgroundDetails, worldElements } = collaborativeData;
+
+		return `# Campaign Notes
+	
+	## Character Creation Summary
+	**Date**: ${new Date().toLocaleDateString()}
+	**Method**: Collaborative Creation
+	
+	### Character Concept
+	${characterConcept}
+	
+	### Background Development
+	${backgroundDetails}
+	
+	### World Building
+	${worldElements}
+	
+	## Adventure Hooks
+	*Generated based on collaborative creation process*
+	
+	## Character Goals
+	*To be developed through gameplay*
+	
+	## Campaign Themes
+	*Aligned with player preferences and character story*
+	`;
+	}
+
+	private generatePreferencesContent(preferences: any): string {
+		return `# Player Preferences
+	
+	## Story Preferences
+	- **Favorite Media**: ${preferences.favoriteMedia || 'Not specified'}
+	- **Hero Type**: ${preferences.heroType || 'Not specified'}
+	- **Favorite Genres**: ${preferences.favoriteGenres?.join(', ') || 'Not specified'}
+	
+	## Gameplay Preferences
+	- **Narrative Style**: ${preferences.preferredNarrativeStyle || 'Not specified'}
+	- **Themes**: ${preferences.preferredThemes?.join(', ') || 'Not specified'}
+	
+	## Character Preferences
+	- **Age**: ${preferences.age || 'Not specified'}
+	- **Background**: ${preferences.background || 'Not specified'}
+	
+	## Notes
+	These preferences were captured during the collaborative character creation process.
+	`;
+	}
+	private generateInitialQuestLog(collaborativeData: any): string {
+		const { characterConcept, backgroundDetails } = collaborativeData;
+
+		return `# Quest Log
+	
+	## Active Quests
+	
+	### The Journey Begins
+	**Status**: Active
+	**Description**: Your adventure starts here, driven by ${characterConcept || 'your character\'s unique story'}
+	**Objectives**: 
+	- Explore your starting situation
+	- Make your first meaningful choice
+	- Begin pursuing your character's goals
+	
+	**Background**: ${backgroundDetails || 'Your character\'s past shapes this journey'}
+	
+	## Completed Quests
+	*None yet - your story is just beginning!*
+	
+	## Available Opportunities
+	*To be discovered through gameplay*
+	
+	*Quest log will update automatically as your adventure progresses.*
+	`;
+	}
+
 }
+
 export const contextFileManager = new ContextFileManager();

@@ -132,7 +132,175 @@ function extractAbilities(content: string): string {
 	return 'Standard abilities';
 }
 
+// ✅ COLLABORATIVE CHARACTER CREATION PROMPTS
 
+export function buildCharacterConceptPrompt(playerPreferences: any): string {
+	return `🎭 **Welcome to Collaborative Character Creation!**
+
+I'm excited to help you create the perfect D&D character for your solo adventure! Based on your preferences, we'll build a hero that matches exactly what you love about storytelling.
+
+**Your Preferences:**
+- Favorite Stories: ${playerPreferences.favoriteMedia || 'Not specified'}
+- Hero Type: ${playerPreferences.heroType || 'Not specified'}
+- Age: ${playerPreferences.age || 'Not specified'}
+
+Let's start with the big picture: **What kind of story do you want your character to live?**
+
+Here are some directions we could explore:
+
+🗡️ **The Reluctant Hero** - Someone thrust into adventure who must find their courage
+⚔️ **The Seeking Warrior** - A fighter on a quest to prove themselves or find redemption  
+🔮 **The Mysterious Scholar** - A magic user uncovering ancient secrets
+🏹 **The Skilled Survivor** - A rogue or ranger who relies on wit and skill
+✨ **Something Completely Different** - Tell me your own vision!
+
+What resonates with you? Or describe the kind of character story that excites you most!`;
+}
+
+export function buildBackgroundDevelopmentPrompt(
+	playerResponse: string,
+	characterConcept: string,
+	playerPreferences: any
+): string {
+	return `Excellent choice! I love the direction of "${characterConcept}".
+
+Now let's dive deeper into your character's **past and motivations**:
+
+**Character Concept:** ${characterConcept}
+
+To make this character feel real and personal, I need to understand their history:
+
+🏠 **Origins**: Where did they come from? A small village, bustling city, or somewhere more exotic?
+
+💔 **The Catalyst**: What event changed everything for them? What pushed them toward adventure?
+
+👥 **Important People**: Who matters most to them? Family, mentors, friends, or even enemies?
+
+🎯 **Personal Stakes**: What do they hope to achieve or protect?
+
+💪 **Skills & Abilities**: How did they develop their capabilities? Through training, necessity, or natural talent?
+
+Share your thoughts on any or all of these elements. Don't worry about D&D mechanics yet - just tell me the **story** of who this person is and what drives them!
+
+**Player Response:** "${playerResponse}"
+
+Based on what you've shared, I'm already seeing some exciting possibilities for your character's background...`;
+}
+
+export function buildWorldBuildingPrompt(
+	playerResponse: string,
+	characterConcept: string,
+	backgroundDetails: string,
+	playerPreferences: any
+): string {
+	return `Perfect! Your character is really coming to life:
+
+**Character:** ${characterConcept}
+**Background:** ${backgroundDetails}
+
+Now let's create the **world** where their story begins:
+
+🌍 **Setting Tone**: Based on your character's story, what kind of world fits them?
+- Gritty and realistic with political intrigue?
+- High fantasy with magic and wonder?
+- Dark and mysterious with hidden threats?
+- Something else entirely?
+
+🏰 **Starting Location**: Where should your adventure begin?
+- Your character's hometown facing a crisis?
+- A crossroads where opportunity calls?
+- A place connected to their past?
+
+⚔️ **Threats & Mysteries**: What dangers or mysteries exist in this world?
+- Ancient evils stirring?
+- Political corruption?
+- Personal vendettas?
+- Unexplored frontiers?
+
+👑 **Important NPCs**: Who are the key people in this world?
+- Allies who might help your character?
+- Enemies from their past?
+- New faces with their own agendas?
+
+Tell me what kind of world excites you for this character's story! I'll weave everything together into the perfect starting scenario.
+
+**Your Latest Input:** "${playerResponse}"`;
+}
+
+export function buildIntegrationPrompt(collaborativeData: any): string {
+	return `🎉 **Character & World Creation Complete!**
+
+Let me weave everything together into your complete character and starting scenario:
+
+**Character Summary:**
+${collaborativeData.characterConcept}
+
+**Background:**
+${collaborativeData.backgroundDetails}
+
+**World Setting:**
+${collaborativeData.worldElements}
+
+Now I'll create:
+1. 📋 **Complete Character Sheet** with D&D 5e stats
+2. 🌍 **World Overview** with key locations and NPCs
+3. 🎬 **Opening Scene** that launches your adventure
+
+This will take just a moment to process all our collaborative work...
+
+*[System will now generate character sheet, world files, and opening scene]*
+
+Ready to begin your epic adventure? Your character's story is about to unfold!`;
+}
+
+// ✅ COLLABORATIVE CREATION ORCHESTRATOR
+export function buildCollaborativeCreationPrompt(
+	playerAction: string,
+	campaignState: any
+): string {
+	const { mode, creationPhase, collaborativeData } = campaignState;
+
+	switch (creationPhase) {
+		case 'concept':
+			return buildCharacterConceptPrompt(collaborativeData.playerPreferences);
+
+		case 'background':
+			return buildBackgroundDevelopmentPrompt(
+				playerAction,
+				collaborativeData.characterConcept || '',
+				collaborativeData.playerPreferences
+			);
+
+		case 'world':
+			return buildWorldBuildingPrompt(
+				playerAction,
+				collaborativeData.characterConcept || '',
+				collaborativeData.backgroundDetails || '',
+				collaborativeData.playerPreferences
+			);
+
+		case 'integration':
+			return buildIntegrationPrompt(collaborativeData);
+
+		default:
+			return buildCharacterConceptPrompt(collaborativeData.playerPreferences);
+	}
+}
+
+// ✅ PROMPT TYPE DETERMINATION
+export function determinePromptType(
+	playerAction: string,
+	campaignState: any
+): 'collaborative_creation' | 'standard_gameplay' {
+	if (campaignState.mode === 'character_creation' ||
+		campaignState.mode === 'world_building') {
+		return 'collaborative_creation';
+	}
+
+	return 'standard_gameplay';
+}
+
+// ✅ EXISTING PROMPTS (keeping for compatibility)
 export function buildCharacterCreationPrompt(playerPreferences: string): string {
 	return `You are an expert D&D character creation assistant and narrative designer. Based on the player's preferences, create a compelling character concept that will lead to an engaging campaign.
 
