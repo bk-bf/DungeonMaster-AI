@@ -233,90 +233,41 @@ class ContextFileManager {
 	}
 
 	// ✅ FIX: Update to accept actual character data
+	// ✅ FIX: Update to accept actual character data
 	private generateCharacterSheetMD(characterName: string, characterClass: string, characterBackground: string): string {
-		return `# ${characterName} - Character Sheet 📜
+		return `# ${characterName} - Character Sheet
 
-## **Basic Information** ℹ️
-- **Name:** ${characterName}
-- **Race:** Human (Variant) 👤
-- **Class:** ${characterClass} ⚔️
-- **Level:** 1 ⭐
-- **Current XP:** 0/300
-- **Background:** ${characterBackground} 🎭
-- **Alignment:** Chaotic Good 😇
-- **Age:** 25
-- **Height:** 5'10"
-- **Weight:** 165 lbs
-- **Current Gold:** 15 gp 💰
+## Basic Information
+- **Name**: ${characterName}
+- **Race**: Human
+- **Class**: ${characterClass}
+- **Level**: 1
+- **Background**: ${characterBackground}
 
-## **Ability Scores** 💪
-| Ability | Score | Modifier |
-|---------|-------|----------|
-| **Strength** 💪 | 12 | +1 |
-| **Dexterity** 🏃 | 16 | +3 |
-| **Constitution** ❤️ | 14 | +2 |
-| **Intelligence** 🧠 | 13 | +1 |
-| **Wisdom** 👁️ | 12 | +1 |
-| **Charisma** 💬 | 10 | +0 |
+## Ability Scores
+- **Strength**: 12 (+1)
+- **Dexterity**: 16 (+3)
+- **Constitution**: 14 (+2)
+- **Intelligence**: 13 (+1)
+- **Wisdom**: 12 (+1)
+- **Charisma**: 10 (+0)
 
-## **Combat Stats** ⚔️
-- **Armor Class:** 13 🛡️ (Leather Armor + Dex)
-- **Hit Points:** 10 ❤️
-- **Speed:** 30 feet 🏃‍♂️
-- **Proficiency Bonus:** +2 ✨
+## Skills & Proficiencies
+- **Proficient Skills**: Stealth, Sleight of Hand, Investigation, Perception
+- **Languages**: Common, Thieves' Cant
+- **Tools**: Thieves' Tools, Forgery Kit
 
-## **Saving Throws** 🎲
-- **Dexterity:** +5 🏃 (Proficient)
-- **Intelligence:** +3 🧠 (Proficient)
+## Current Status
+- **Hit Points**: 10/10
+- **Armor Class**: 13 (Leather Armor + Dex)
+- **Speed**: 30 feet
 
-## **Skills** 🎯
-- **Acrobatics (Dex):** +3 🤸‍♂️
-- **Investigation (Int):** +5 🔍 (Proficient + Expertise)
-- **Perception (Wis):** +3 👀 (Proficient)
-- **Sleight of Hand (Dex):** +5 🤲 (Proficient)
-- **Stealth (Dex):** +7 🥷 (Proficient + Expertise)
-
-## **Languages** 🗣️
-- **Common**
-- **Thieves' Cant** 🤫
-
-## **Features & Traits** ⭐
-
-### **Rogue Features:** 🗡️
-- **Expertise:** Investigation 🔍, Stealth 🥷 (double proficiency bonus)
-- **Sneak Attack:** **1d6** damage ⚡
-- **Thieves' Cant:** Secret language of rogues and criminals 🤫
-
-### **${characterBackground} Features:** 🎭
-- **Background Feature:** Varies by background 🛠️
-
-## **Equipment** 🎒
-
-### **Weapons:** ⚔️
-- Shortsword 🗡️ (1d6+3 piercing, finesse)
-- Shortbow + 20 arrows 🏹 (1d6+3 piercing, range 80/320)
-- 2 daggers 🗡️ (1d4+3 piercing, finesse, light, thrown 20/60)
-
-### **Armor & Protection:** 🛡️
-- Leather armor 🦺 (AC 11 + Dex modifier)
-
-### **Adventuring Gear:** 🎒
-- **Burglar's pack** 🎒 (backpack, bag of 1000 ball bearings, 10 feet of string, bell, 5 candles, crowbar, hammer, 10 pitons, hooded lantern, 2 flasks of oil, 5 days rations, tinderbox, waterskin, 50 feet hempen rope)
-- **Thieves' tools** 🔧
-- **Leather armor** 🦺
-
-## **Personality Traits** 🎭
-- **Trait 1:** I always have a plan for what to do when things go wrong 🧠
-- **Trait 2:** I am always calm, no matter what the situation 😌
-
-## **Ideals** 💡
-- **Freedom:** Chains are meant to be broken, as are those who would forge them ⛓️‍💥
-
-## **Bonds** 💖
-- **My tools:** My tools are symbols of my past life, and I carry them so that I will never forget my roots 🔧
-
-## **Flaws** ⚠️
-- **Trust:** I have trouble trusting in my allies 🤝❌
+## Equipment
+- Shortsword
+- Shortbow with 20 arrows
+- Leather armor
+- Thieves' tools
+- Backpack with basic supplies
 
 *Last Updated: ${new Date().toISOString()}*`;
 	}
