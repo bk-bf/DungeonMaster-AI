@@ -115,7 +115,8 @@
 			: 'hidden'} lg:block"
 		style="width: {sidebarWidth}px;"
 	>
-		<Sidebar onClose={closeSidebar} />
+		<!-- Update the Sidebar component call -->
+		<Sidebar onClose={closeSidebar} {sessionRestored} bind:sidebarWidth />
 
 		<!-- Subtle Resize Handle -->
 		<div

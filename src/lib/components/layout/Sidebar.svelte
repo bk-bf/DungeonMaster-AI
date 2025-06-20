@@ -6,6 +6,7 @@
 	interface Props {
 		onClose?: () => void;
 		sessionRestored?: boolean;
+		sidebarWidth?: number;
 	}
 
 	interface ContextFile {
@@ -19,11 +20,18 @@
 		level: number;
 	}
 
-	let { onClose, sessionRestored = false }: Props = $props();
+	let {
+		onClose,
+		sessionRestored = false,
+		sidebarWidth = $bindable(320),
+	}: Props = $props();
 
-	// ✅ Use reactive state instead of $derived for better persistence
 	let characterFiles = $state<ContextFile[]>([]);
 	let characterData = $state<CharacterData | null>(null);
+
+	// ✅ Replace console.log with $inspect for $state variables
+	$inspect("📋 Character files:", characterFiles);
+	$inspect("👤 Character data:", characterData);
 
 	// ✅ Reactive update when files change
 	$effect(() => {
@@ -34,9 +42,6 @@
 		characterData = characterSheet
 			? parseCharacterInfo(characterSheet.content)
 			: null;
-
-		console.log("📋 Character files updated:", files.length);
-		console.log("👤 Character data:", characterData);
 	});
 
 	// ✅ Force refresh on mount to ensure data is loaded
@@ -54,9 +59,6 @@
 			characterData = characterSheet
 				? parseCharacterInfo(characterSheet.content)
 				: null;
-
-			console.log("📋 Sidebar force refresh - Files:", files.length);
-			console.log("👤 Sidebar force refresh - Character:", characterData);
 		}, 100);
 	});
 
@@ -65,11 +67,6 @@
 			console.log("⚠️ No markdown content to parse");
 			return null;
 		}
-
-		console.log(
-			"📝 Parsing character info from markdown:",
-			markdown.substring(0, 100) + "...",
-		);
 
 		const nameMatch = markdown.match(/\*\*Name\*\*:\s*(.+)/);
 		const classMatch = markdown.match(/\*\*Class\*\*:\s*(.+)/);
@@ -81,7 +78,6 @@
 			level: levelMatch?.[1] ? parseInt(levelMatch[1]) : 1,
 		};
 
-		console.log("✅ Parsed character data:", result);
 		return result;
 	}
 
@@ -99,14 +95,14 @@
 		characterData = characterSheet
 			? parseCharacterInfo(characterSheet.content)
 			: null;
-
-		console.log("📋 Manual refresh - Files:", files.length);
-		console.log("👤 Manual refresh - Character:", characterData);
 	}
 </script>
 
 <!-- Sidebar with integrated title -->
-<aside class="h-full bg-white border-r border-gray-200 flex flex-col">
+<aside
+	class="h-full bg-white border-r border-gray-200 flex flex-col"
+	bind:clientWidth={sidebarWidth}
+>
 	<!-- Sidebar header with DungeonMaster AI branding -->
 	<div class="flex items-center justify-between p-4 border-b border-gray-200">
 		<div class="flex items-center space-x-2">
