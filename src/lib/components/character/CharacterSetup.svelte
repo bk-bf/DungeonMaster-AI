@@ -5,21 +5,21 @@
 	import { campaignStore } from "$lib/stores/campaigns";
 	import { createEventDispatcher } from "svelte";
 
-	// ✅ ENHANCED EVENT DISPATCHER WITH BETTER TYPE SAFETY
+	// ✅ SIMPLIFIED EVENT DISPATCHER
 	const dispatch = createEventDispatcher<{
 		complete: {
 			collaborativeMode: boolean;
 			preferences: any;
 			characterData?: any;
 			timestamp: string;
-			setupType: "collaborative" | "traditional" | "import";
+			setupType: "traditional" | "import";
 		};
 	}>();
 
 	// Component state
 	let currentStep = 1;
 	let showImport = false;
-	let isCompletingSetup = false; // ✅ NEW: Loading state
+	let isCompletingSetup = false;
 
 	// Traditional character creation fields
 	let characterName = "";
@@ -31,7 +31,7 @@
 		showImport = true;
 	}
 
-	// ✅ ENHANCED: Better logging and type safety
+	// ✅ SIMPLIFIED: Only traditional setup
 	async function completeTraditionalSetup(event: CustomEvent) {
 		const preferences = event.detail;
 
@@ -58,7 +58,6 @@
 				preferences,
 			});
 
-			// ✅ ENHANCED DISPATCH with character data
 			dispatch("complete", {
 				collaborativeMode: false,
 				preferences,
@@ -75,33 +74,7 @@
 		}
 	}
 
-	// ✅ ENHANCED: Better logging and context
-	async function completeCollaborativeSetup(event: CustomEvent) {
-		const preferences = event.detail;
-
-		isCompletingSetup = true;
-
-		try {
-			console.log(
-				"🎭 Collaborative setup completed with preferences:",
-				preferences,
-			);
-
-			// No character files created yet - LLM will handle character creation
-
-			// ✅ ENHANCED DISPATCH with more context
-			dispatch("complete", {
-				collaborativeMode: true,
-				preferences,
-				timestamp: new Date().toISOString(),
-				setupType: "collaborative",
-			});
-		} finally {
-			isCompletingSetup = false;
-		}
-	}
-
-	// ✅ ENHANCED: Better import handling
+	// ✅ SIMPLIFIED: Better import handling
 	function handleImportSuccess(event: CustomEvent) {
 		const { data } = event.detail;
 
@@ -130,26 +103,20 @@
 		alert(`Import failed: ${event.detail}`);
 	}
 
-	// ✅ NEW: Validation helper
+	// Validation helper
 	$: isCharacterNameValid = characterName.trim().length > 0;
 </script>
 
-<!-- ✅ NEW: Loading overlay for setup completion -->
+<!-- ✅ SIMPLIFIED: Loading overlay -->
 {#if isCompletingSetup}
 	<div
 		class="fixed inset-0 bg-black bg-opacity-50 z-60 flex items-center justify-center"
 	>
 		<div class="bg-white rounded-lg p-6 text-center shadow-xl">
 			<div
-				class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"
+				class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"
 			></div>
-			<p class="text-gray-600">
-				{#if currentStep === 2}
-					Preparing your collaborative adventure...
-				{:else}
-					Setting up your character...
-				{/if}
-			</p>
+			<p class="text-gray-600">Setting up your character...</p>
 		</div>
 	</div>
 {/if}
@@ -180,49 +147,10 @@
 						Choose how you'd like to begin your adventure:
 					</p>
 
-					<!-- ✅ ENHANCED: Better visual feedback for collaborative creation -->
-					<button
-						onclick={() => (currentStep = 2)}
-						class="w-full p-4 border-2 border-green-200 bg-green-50 rounded-lg hover:border-green-300 hover:bg-green-100 focus:ring-2 focus:ring-green-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
-					>
-						<div class="flex items-center space-x-3">
-							<div
-								class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"
-							>
-								<svg
-									class="w-6 h-6 text-green-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h3 class="font-semibold text-green-800">
-									Collaborative Character Creation
-								</h3>
-								<p class="text-sm text-green-700">
-									<span
-										class="inline-block px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-medium mr-2"
-										>RECOMMENDED</span
-									>
-									Work with the AI to create your perfect character
-									through conversation
-								</p>
-							</div>
-						</div>
-					</button>
-
 					<!-- Traditional Creation -->
 					<button
-						onclick={() => (currentStep = 3)}
-						class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 focus:ring-2 focus:ring-red-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
+						onclick={() => (currentStep = 2)}
+						class="w-full p-4 border-2 border-red-200 bg-red-50 rounded-lg hover:border-red-300 hover:bg-red-100 focus:ring-2 focus:ring-red-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
 					>
 						<div class="flex items-center space-x-3">
 							<div
@@ -243,12 +171,11 @@
 								</svg>
 							</div>
 							<div>
-								<h3 class="font-semibold">
-									Traditional Character Creation
+								<h3 class="font-semibold text-red-800">
+									Create New Character
 								</h3>
-								<p class="text-sm text-gray-600">
-									Create your character manually with forms
-									(classic approach)
+								<p class="text-sm text-red-700">
+									Create your character with guidance
 								</p>
 							</div>
 						</div>
@@ -257,14 +184,14 @@
 					<!-- Import Previous Session -->
 					<button
 						onclick={handleImportClick}
-						class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
+						class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
 					>
 						<div class="flex items-center space-x-3">
 							<div
-								class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center"
+								class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"
 							>
 								<svg
-									class="w-6 h-6 text-blue-600"
+									class="w-6 h-6 text-gray-600"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
@@ -292,56 +219,8 @@
 			</div>
 		{/if}
 
-		<!-- Step 2: Collaborative Mode - Player Preferences -->
+		<!-- Step 2: Character Basic Info -->
 		{#if currentStep === 2}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					🎭 Tell Us About Yourself
-				</h2>
-
-				<div
-					class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6"
-				>
-					<div class="flex items-start space-x-3">
-						<svg
-							class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-						<div>
-							<h3 class="font-medium text-green-800">
-								How Collaborative Creation Works
-							</h3>
-							<p class="text-sm text-green-700 mt-1">
-								After you share your preferences, our AI Dungeon
-								Master will have a conversation with you to
-								create the perfect character together. You'll
-								discuss your character's background, abilities,
-								and story collaboratively!
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- ✅ FIXED: Added missing onBack prop -->
-				<PlayerPreferencesForm
-					collaborativeMode={true}
-					onBack={() => (currentStep = 1)}
-					on:complete={completeCollaborativeSetup}
-				/>
-			</div>
-		{/if}
-
-		<!-- Step 3: Traditional Mode - Character Basic Info -->
-		{#if currentStep === 3}
 			<div class="p-6">
 				<h2 class="text-2xl font-bold mb-4">
 					🧙‍♂️ Create Your Character
@@ -364,7 +243,6 @@
 							placeholder="Enter your character's name"
 							required
 						/>
-						<!-- ✅ NEW: Validation feedback -->
 						{#if !isCharacterNameValid && characterName.length > 0}
 							<p class="text-red-500 text-xs mt-1">
 								Character name is required
@@ -439,9 +317,8 @@
 						← Back
 					</button>
 
-					<!-- ✅ ENHANCED: Added validation and better styling -->
 					<button
-						onclick={() => (currentStep = 4)}
+						onclick={() => (currentStep = 3)}
 						disabled={!isCharacterNameValid}
 						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
 					>
@@ -449,7 +326,7 @@
 					</button>
 				</div>
 
-				<!-- ✅ NEW: Character preview -->
+				<!-- Character preview -->
 				{#if isCharacterNameValid}
 					<div class="mt-6 p-4 bg-gray-50 rounded-lg border">
 						<h4 class="font-medium text-gray-800 mb-2">
@@ -467,11 +344,11 @@
 			</div>
 		{/if}
 
-		<!-- Step 4: Traditional Mode - Player Preferences -->
-		{#if currentStep === 4}
+		<!-- Step 3: Player Preferences -->
+		{#if currentStep === 3}
 			<PlayerPreferencesForm
 				collaborativeMode={false}
-				onBack={() => (currentStep = 3)}
+				onBack={() => (currentStep = 2)}
 				on:complete={completeTraditionalSetup}
 			/>
 		{/if}
@@ -479,7 +356,6 @@
 </div>
 
 <style>
-	/* ✅ NEW: Enhanced animations */
 	.transform {
 		transition: transform 0.2s ease-in-out;
 	}
