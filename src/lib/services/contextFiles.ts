@@ -1,7 +1,14 @@
 // src/lib/services/contextFiles.ts
 import { browser } from '$app/environment';
-import type { ContextFile, EntityExtraction, PlayerPreferences } from '$lib/types';
-
+import type {
+	CampaignContext,
+	ContextFile,
+	EntityExtraction,
+	PlayerPreferences,
+	CharacterData,
+	Campaign,
+	Message
+} from '$lib/types'
 class ContextFileManager {
 	private files: Map<string, ContextFile> = new Map();
 

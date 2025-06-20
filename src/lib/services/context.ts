@@ -2,11 +2,20 @@
 
 import { playerPreferencesStore } from '$lib/stores/playerPreferences';
 import { get } from 'svelte/store';
-import type { CampaignContext, PlayerPreferences, ContextFile, EntityExtraction } from '$lib/types';
 import { contextFileManager } from './contextFiles';
 
+import type {
+	CampaignContext,
+	ContextFile,
+	EntityExtraction,
+	PlayerPreferences,
+	CharacterData,
+	Campaign,
+	Message
+} from '$lib/types';
 
 export class CampaignContextManager {
+	//context tonken lenght depricated?
 	private maxContextLength = 50000;
 	private maxHistoryMessages = 10;
 

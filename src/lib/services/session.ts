@@ -1,6 +1,15 @@
 // src/lib/services/session.ts
 import { browser } from '$app/environment';
-import type { PlayerPreferences, Campaign } from '$lib/types';
+
+import type {
+	CampaignContext,
+	ContextFile,
+	EntityExtraction,
+	PlayerPreferences,
+	CharacterData,
+	Campaign,
+	Message
+} from '$lib/types';
 
 export interface SessionData {
 	characterName?: string;

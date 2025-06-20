@@ -2,7 +2,15 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { sessionManager } from '$lib/services/session';
-import type { Campaign, Message, PlayerPreferences } from '$lib/types';
+import type {
+	CampaignContext,
+	ContextFile,
+	EntityExtraction,
+	PlayerPreferences,
+	CharacterData,
+	Campaign,
+	Message
+} from '$lib/types';
 
 interface CampaignStore {
 	campaigns: Campaign[];

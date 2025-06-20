@@ -14,13 +14,21 @@
 	import ContextTester from "$lib/components/debug/ContextTester.svelte";
 	import { sessionManager } from "$lib/services/session";
 	import { onMount } from "svelte";
-	import type { CampaignState, PlayerPreferences } from "$lib/types";
+	import type {
+		CampaignState,
+		CampaignContext,
+		ContextFile,
+		EntityExtraction,
+		PlayerPreferences,
+		CharacterData,
+		Campaign,
+		Message,
+	} from "$lib/types";
 
 	let isLoading = false;
 	let showContextTester = false;
 	let showCharacterSetup = false;
 	let sessionLoaded = false;
-
 	// ✅ NEW: Collaborative creation state
 	let campaignState: CampaignState = {
 		mode: "gameplay",

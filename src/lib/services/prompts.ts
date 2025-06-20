@@ -1,5 +1,13 @@
 // src/lib/services/prompts.ts
-import type { ContextFile, EntityExtraction, CampaignContext, PlayerPreferences } from '$lib/types';
+import type {
+	CampaignContext,
+	ContextFile,
+	EntityExtraction,
+	PlayerPreferences,
+	CharacterData,
+	Campaign,
+	Message
+} from '$lib/types';
 
 export function buildDungeonMasterPrompt(playerAction: string, context: CampaignContext): string {
 	// Build context files section
