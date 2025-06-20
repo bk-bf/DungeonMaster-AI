@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { playerPreferencesStore } from "$lib/stores/playerPreferences";
 	import { createEventDispatcher } from "svelte";
-	import type { PlayerPreferences } from "$lib/stores/playerPreferences";
+	import type { PlayerPreferences } from "$lib/types";
 
 	const dispatch = createEventDispatcher<{
 		complete: PlayerPreferences;
 		skip: void;
 	}>();
+
+	// ✅ ADD COLLABORATIVE MODE PROP AND ONBACK CALLBACK
+	export let collaborativeMode = false;
+	export let onBack: (() => void) | null = null;
 
 	let preferences: PlayerPreferences = {
 		favoriteGenres: [],
@@ -21,10 +25,15 @@
 		preferredThemes: [],
 	};
 
-	let currentStep = 1;
-	const totalSteps = 4;
+	// ✅ ADD SIMPLIFIED COLLABORATIVE FIELDS
+	let age: number | undefined = undefined;
+	let favoriteMedia = "";
+	let heroType = "";
 
-	// Predefined options for easy selection
+	let currentStep = 1;
+	const totalSteps = collaborativeMode ? 1 : 4; // ✅ SIMPLIFIED STEPS FOR COLLABORATIVE MODE
+
+	// Predefined options for easy selection (existing code)
 	const genreOptions = [
 		"Zero-to-hero narratives",
 		"Character growth",
@@ -84,9 +93,45 @@
 		}
 	}
 
+	// ✅ MODIFIED TO HANDLE COLLABORATIVE MODE
 	function completePreferences() {
-		playerPreferencesStore.setPreferences(preferences);
-		dispatch("complete", preferences);
+		if (collaborativeMode) {
+			// Build preferences from simplified fields
+			const collaborativePreferences: PlayerPreferences = {
+				age: age,
+				favoriteBooks:
+					favoriteMedia.includes("book") ||
+					favoriteMedia.includes("novel")
+						? [favoriteMedia]
+						: [],
+				favoriteMovies:
+					favoriteMedia.includes("movie") ||
+					favoriteMedia.includes("show") ||
+					favoriteMedia.includes("film")
+						? [favoriteMedia]
+						: [favoriteMedia],
+				favoriteGames: favoriteMedia.includes("game")
+					? [favoriteMedia]
+					: [],
+				favoriteGenres: ["Character growth", "Zero-to-hero narratives"], // Default for collaborative
+				preferredNarrativeStyle:
+					"Deep character development with moral complexity", // Default
+				preferredThemes: [
+					"Growth through adversity",
+					"Finding purpose",
+				], // Default
+				personalityTraits: heroType ? [heroType] : [],
+				favoriteCharacters: [],
+				interests: [],
+			};
+
+			playerPreferencesStore.setPreferences(collaborativePreferences);
+			dispatch("complete", collaborativePreferences);
+		} else {
+			// Traditional mode - use existing preferences
+			playerPreferencesStore.setPreferences(preferences);
+			dispatch("complete", preferences);
+		}
 	}
 
 	function skipPreferences() {
@@ -106,210 +151,289 @@
 <div class="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
 	<div class="mb-6">
 		<h2 class="text-2xl font-bold text-gray-900 mb-2">
-			Personalize Your D&D Experience
+			{collaborativeMode
+				? "Tell Us About Your Story Preferences"
+				: "Personalize Your D&D Experience"}
 		</h2>
 		<p class="text-gray-600">
-			Help us create the perfect campaign for you by sharing your
-			preferences.
+			{collaborativeMode
+				? "Share some quick preferences so we can create the perfect character together!"
+				: "Help us create the perfect campaign for you by sharing your preferences."}
 		</p>
 
-		<!-- Progress bar -->
-		<div class="mt-4">
-			<div class="flex justify-between text-sm text-gray-500 mb-2">
-				<span>Step {currentStep} of {totalSteps}</span>
-				<span
-					>{Math.round((currentStep / totalSteps) * 100)}% complete</span
-				>
+		<!-- ✅ CONDITIONAL PROGRESS BAR -->
+		{#if !collaborativeMode}
+			<!-- Progress bar -->
+			<div class="mt-4">
+				<div class="flex justify-between text-sm text-gray-500 mb-2">
+					<span>Step {currentStep} of {totalSteps}</span>
+					<span
+						>{Math.round((currentStep / totalSteps) * 100)}%
+						complete</span
+					>
+				</div>
+				<div class="w-full bg-gray-200 rounded-full h-2">
+					<div
+						class="bg-red-600 h-2 rounded-full transition-all duration-300"
+						style="width: {(currentStep / totalSteps) * 100}%"
+					></div>
+				</div>
 			</div>
-			<div class="w-full bg-gray-200 rounded-full h-2">
-				<div
-					class="bg-red-600 h-2 rounded-full transition-all duration-300"
-					style="width: {(currentStep / totalSteps) * 100}%"
-				></div>
-			</div>
-		</div>
+		{/if}
 	</div>
 
-	<!-- Step 1: Basic Info -->
-	{#if currentStep === 1}
-		<div class="space-y-4">
-			<h3 class="text-lg font-semibold">Basic Information</h3>
-
+	<!-- ✅ COLLABORATIVE MODE - SIMPLIFIED FORM -->
+	{#if collaborativeMode}
+		<div class="space-y-6">
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
+				<label
+					for="collab-age"
+					class="block text-sm font-medium text-gray-700 mb-2"
 					>Age (optional)</label
 				>
 				<input
+					id="collab-age"
+					bind:value={age}
 					type="number"
-					bind:value={preferences.age}
-					class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
 					placeholder="Your age"
 				/>
 			</div>
 
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
-					>Favorite narrative themes</label
-				>
-				<div class="grid grid-cols-2 gap-2">
-					{#each themeOptions as theme}
-						<button
-							type="button"
-							onclick={() =>
-								toggleArrayItem(
-									preferences.preferredThemes || [],
-									theme,
-								)}
-							class="text-left p-2 rounded border transition-colors {(
-								preferences.preferredThemes || []
-							).includes(theme)
-								? 'bg-red-100 border-red-300 text-red-800'
-								: 'bg-gray-50 border-gray-200 hover:bg-gray-100'}"
-						>
-							{theme}
-						</button>
-					{/each}
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Step 2: Favorite Genres -->
-	{#if currentStep === 2}
-		<div class="space-y-4">
-			<h3 class="text-lg font-semibold">Story Preferences</h3>
-
-			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
-					>What types of stories do you enjoy?</label
-				>
-				<div class="grid grid-cols-2 gap-2">
-					{#each genreOptions as genre}
-						<button
-							type="button"
-							onclick={() =>
-								toggleArrayItem(
-									preferences.favoriteGenres || [],
-									genre,
-								)}
-							class="text-left p-2 rounded border transition-colors {(
-								preferences.favoriteGenres || []
-							).includes(genre)
-								? 'bg-red-100 border-red-300 text-red-800'
-								: 'bg-gray-50 border-gray-200 hover:bg-gray-100'}"
-						>
-							{genre}
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
-					>Preferred narrative style</label
-				>
-				<div class="space-y-2">
-					{#each narrativeStyleOptions as style}
-						<button
-							type="button"
-							onclick={() =>
-								(preferences.preferredNarrativeStyle = style)}
-							class="w-full text-left p-3 rounded border transition-colors {preferences.preferredNarrativeStyle ===
-							style
-								? 'bg-red-100 border-red-300 text-red-800'
-								: 'bg-gray-50 border-gray-200 hover:bg-gray-100'}"
-						>
-							{style}
-						</button>
-					{/each}
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Step 3: Media Preferences -->
-	{#if currentStep === 3}
-		<div class="space-y-4">
-			<h3 class="text-lg font-semibold">Inspiration Sources</h3>
-
-			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
-					>Favorite books/series (optional)</label
+				<label
+					for="collab-media"
+					class="block text-sm font-medium text-gray-700 mb-2"
+					>Favorite Movies/Books/Games</label
 				>
 				<textarea
-					bind:value={preferences.favoriteBooks}
-					class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-					placeholder="e.g., Harry Potter, Lord of the Rings, Drizzt series..."
+					id="collab-media"
+					bind:value={favoriteMedia}
+					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
 					rows="3"
+					placeholder="What stories do you love? (e.g., Lord of the Rings, Marvel movies, Baldur's Gate 3, etc.)"
 				></textarea>
+				<p class="text-xs text-gray-500 mt-1">
+					This helps us understand the tone and themes you enjoy
+				</p>
 			</div>
 
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
-					>Favorite movies/shows (optional)</label
+				<label
+					for="collab-hero"
+					class="block text-sm font-medium text-gray-700 mb-2"
+					>What kind of hero appeals to you?</label
 				>
 				<textarea
-					bind:value={preferences.favoriteMovies}
-					class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-					placeholder="e.g., Critical Role, Game of Thrones, Marvel movies..."
+					id="collab-hero"
+					bind:value={heroType}
+					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
 					rows="3"
+					placeholder="Describe the type of character you'd like to play... (e.g., a clever rogue with a heart of gold, a noble paladin seeking redemption, a curious wizard uncovering ancient secrets, etc.)"
 				></textarea>
-			</div>
-
-			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2"
-					>Favorite games (optional)</label
-				>
-				<textarea
-					bind:value={preferences.favoriteGames}
-					class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-					placeholder="e.g., Baldur's Gate 3, Skyrim, The Witcher..."
-					rows="3"
-				></textarea>
+				<p class="text-xs text-gray-500 mt-1">
+					Don't worry about specific D&D classes - just describe what
+					kind of story role interests you!
+				</p>
 			</div>
 		</div>
-	{/if}
 
-	<!-- Step 4: Review -->
-	{#if currentStep === 4}
-		<div class="space-y-4">
-			<h3 class="text-lg font-semibold">Review Your Preferences</h3>
+		<!-- ✅ TRADITIONAL MODE - FULL FORM (EXISTING CODE) -->
+	{:else}
+		<!-- Step 1: Basic Info -->
+		{#if currentStep === 1}
+			<div class="space-y-4">
+				<h3 class="text-lg font-semibold">Basic Information</h3>
 
-			<div class="bg-gray-50 p-4 rounded-lg space-y-2">
-				{#if preferences.preferredThemes && preferences.preferredThemes.length > 0}
-					<p>
-						<strong>Themes:</strong>
-						{preferences.preferredThemes.join(", ")}
-					</p>
-				{/if}
+				<div>
+					<label
+						for="trad-age"
+						class="block text-sm font-medium text-gray-700 mb-2"
+						>Age (optional)</label
+					>
+					<input
+						id="trad-age"
+						type="number"
+						bind:value={preferences.age}
+						class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+						placeholder="Your age"
+					/>
+				</div>
 
-				{#if preferences.favoriteGenres && preferences.favoriteGenres.length > 0}
-					<p>
-						<strong>Genres:</strong>
-						{preferences.favoriteGenres.join(", ")}
-					</p>
-				{/if}
-
-				{#if preferences.preferredNarrativeStyle}
-					<p>
-						<strong>Style:</strong>
-						{preferences.preferredNarrativeStyle}
-					</p>
-				{/if}
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2"
+						>Favorite narrative themes</label
+					>
+					<div class="grid grid-cols-2 gap-2">
+						{#each themeOptions as theme}
+							<button
+								type="button"
+								onclick={() =>
+									toggleArrayItem(
+										preferences.preferredThemes || [],
+										theme,
+									)}
+								class="text-left p-2 rounded border transition-colors {(
+									preferences.preferredThemes || []
+								).includes(theme)
+									? 'bg-red-100 border-red-300 text-red-800'
+									: 'bg-gray-50 border-gray-200 hover:bg-gray-100'}"
+							>
+								{theme}
+							</button>
+						{/each}
+					</div>
+				</div>
 			</div>
+		{/if}
 
-			<p class="text-sm text-gray-600">
-				These preferences will help our AI create personalized D&D
-				campaigns tailored to your interests. You can change them
-				anytime in settings.
-			</p>
-		</div>
+		<!-- Step 2: Favorite Genres -->
+		{#if currentStep === 2}
+			<div class="space-y-4">
+				<h3 class="text-lg font-semibold">Story Preferences</h3>
+
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2"
+						>What types of stories do you enjoy?</label
+					>
+					<div class="grid grid-cols-2 gap-2">
+						{#each genreOptions as genre}
+							<button
+								type="button"
+								onclick={() =>
+									toggleArrayItem(
+										preferences.favoriteGenres || [],
+										genre,
+									)}
+								class="text-left p-2 rounded border transition-colors {(
+									preferences.favoriteGenres || []
+								).includes(genre)
+									? 'bg-red-100 border-red-300 text-red-800'
+									: 'bg-gray-50 border-gray-200 hover:bg-gray-100'}"
+							>
+								{genre}
+							</button>
+						{/each}
+					</div>
+				</div>
+
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2"
+						>Preferred narrative style</label
+					>
+					<div class="space-y-2">
+						{#each narrativeStyleOptions as style}
+							<button
+								type="button"
+								onclick={() =>
+									(preferences.preferredNarrativeStyle =
+										style)}
+								class="w-full text-left p-3 rounded border transition-colors {preferences.preferredNarrativeStyle ===
+								style
+									? 'bg-red-100 border-red-300 text-red-800'
+									: 'bg-gray-50 border-gray-200 hover:bg-gray-100'}"
+							>
+								{style}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Step 3: Media Preferences -->
+		{#if currentStep === 3}
+			<div class="space-y-4">
+				<h3 class="text-lg font-semibold">Inspiration Sources</h3>
+
+				<div>
+					<label
+						for="trad-books"
+						class="block text-sm font-medium text-gray-700 mb-2"
+						>Favorite books/series (optional)</label
+					>
+					<textarea
+						id="trad-books"
+						bind:value={preferences.favoriteBooks}
+						class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+						placeholder="e.g., Harry Potter, Lord of the Rings, Drizzt series..."
+						rows="3"
+					></textarea>
+				</div>
+
+				<div>
+					<label
+						for="trad-movies"
+						class="block text-sm font-medium text-gray-700 mb-2"
+						>Favorite movies/shows (optional)</label
+					>
+					<textarea
+						id="trad-movies"
+						bind:value={preferences.favoriteMovies}
+						class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+						placeholder="e.g., Critical Role, Game of Thrones, Marvel movies..."
+						rows="3"
+					></textarea>
+				</div>
+
+				<div>
+					<label
+						for="trad-games"
+						class="block text-sm font-medium text-gray-700 mb-2"
+						>Favorite games (optional)</label
+					>
+					<textarea
+						id="trad-games"
+						bind:value={preferences.favoriteGames}
+						class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+						placeholder="e.g., Baldur's Gate 3, Skyrim, The Witcher..."
+						rows="3"
+					></textarea>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Step 4: Review -->
+		{#if currentStep === 4}
+			<div class="space-y-4">
+				<h3 class="text-lg font-semibold">Review Your Preferences</h3>
+
+				<div class="bg-gray-50 p-4 rounded-lg space-y-2">
+					{#if preferences.preferredThemes && preferences.preferredThemes.length > 0}
+						<p>
+							<strong>Themes:</strong>
+							{preferences.preferredThemes.join(", ")}
+						</p>
+					{/if}
+
+					{#if preferences.favoriteGenres && preferences.favoriteGenres.length > 0}
+						<p>
+							<strong>Genres:</strong>
+							{preferences.favoriteGenres.join(", ")}
+						</p>
+					{/if}
+
+					{#if preferences.preferredNarrativeStyle}
+						<p>
+							<strong>Style:</strong>
+							{preferences.preferredNarrativeStyle}
+						</p>
+					{/if}
+				</div>
+
+				<p class="text-sm text-gray-600">
+					These preferences will help our AI create personalized D&D
+					campaigns tailored to your interests. You can change them
+					anytime in settings.
+				</p>
+			</div>
+		{/if}
 	{/if}
 
-	<!-- Navigation buttons -->
+	<!-- ✅ UPDATED NAVIGATION BUTTONS WITH ONBACK SUPPORT -->
 	<div class="flex justify-between mt-8">
 		<div>
-			{#if currentStep > 1}
+			{#if currentStep > 1 && !collaborativeMode}
 				<button
 					type="button"
 					onclick={prevStep}
@@ -317,19 +441,28 @@
 				>
 					← Previous
 				</button>
+			{:else if collaborativeMode && onBack}
+				<button
+					type="button"
+					onclick={onBack}
+					class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+				>
+					← Back
+				</button>
 			{/if}
 		</div>
 
 		<div class="space-x-2">
-			<button
+			<!-- useless button for now -->
+			<!-- <button
 				type="button"
 				onclick={skipPreferences}
 				class="px-4 py-2 text-gray-500 hover:text-gray-700 transition-colors"
 			>
-				Skip for now
-			</button>
+				{collaborativeMode ? "Use Defaults" : "Skip for now"}
+			</button> -->
 
-			{#if currentStep < totalSteps}
+			{#if !collaborativeMode && currentStep < totalSteps}
 				<button
 					type="button"
 					onclick={nextStep}
@@ -343,7 +476,7 @@
 					onclick={completePreferences}
 					class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
 				>
-					Complete Setup
+					{collaborativeMode ? "Start Adventure" : "Complete Setup"}
 				</button>
 			{/if}
 		</div>

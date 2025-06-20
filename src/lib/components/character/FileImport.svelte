@@ -398,7 +398,7 @@
 	}
 </script>
 
-<!-- ✅ ISSUE 3 FIX: Enhanced component rendering with higher z-index and proper accessibility -->
+<!-- ✅ COMPACT VERTICAL LAYOUT -->
 <div
 	class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4"
 	role="dialog"
@@ -406,7 +406,7 @@
 	aria-labelledby="import-dialog-title"
 >
 	<div
-		class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+		class="bg-white rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto"
 	>
 		<div class="p-6">
 			<div class="flex items-center justify-between mb-6">
@@ -441,329 +441,283 @@
 			<div class="space-y-6">
 				<p class="text-sm text-gray-600">
 					Import your previously exported files to continue your
-					adventure. You can import character data, campaign data, or
-					both.
+					adventure.
 				</p>
 
-				<!-- Two Column Layout -->
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<!-- Character Data Upload -->
-					<div class="space-y-4">
-						<div class="flex items-center space-x-2">
+				<!-- ✅ COMPACT CHARACTER DATA UPLOAD -->
+				<div class="space-y-3">
+					<div class="flex items-center space-x-2">
+						<div
+							class="w-6 h-6 bg-red-100 rounded-md flex items-center justify-center"
+						>
+							<svg
+								class="w-4 h-4 text-red-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+								/>
+							</svg>
+						</div>
+						<h4 class="font-medium text-gray-900">
+							Character Data
+						</h4>
+					</div>
+
+					{#if characterFile}
+						<!-- Selected Character File -->
+						<div
+							class="border border-green-200 bg-green-50 rounded-lg p-3"
+						>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center space-x-3">
+									<svg
+										class="w-6 h-6 text-green-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+									<div>
+										<p
+											class="text-sm font-medium text-green-900"
+										>
+											{characterFile.name}
+										</p>
+										<p class="text-xs text-green-700">
+											{(
+												characterFile.size / 1024
+											).toFixed(1)} KB
+										</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									onclick={removeCharacterFile}
+									class="text-green-600 hover:text-green-800 transition-colors"
+									aria-label="Remove character file"
+								>
+									<svg
+										class="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+					{:else}
+						<!-- ✅ COMPACT CHARACTER DROP ZONE -->
+						<div
+							class="border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer {characterDragOver
+								? 'border-red-400 bg-red-50'
+								: 'border-gray-300 hover:border-red-400 hover:bg-red-50'}"
+							ondragover={handleCharacterDragOver}
+							ondragleave={handleCharacterDragLeave}
+							ondrop={handleCharacterDrop}
+							onclick={handleCharacterDropZoneClick}
+							role="button"
+							tabindex="0"
+							aria-label="Click to select character file or drag and drop JSON file here"
+						>
 							<div
-								class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center"
+								class="flex items-center justify-center space-x-3"
 							>
 								<svg
-									class="w-5 h-5 text-red-600"
-									fill="none"
+									class="w-8 h-8 text-gray-400"
 									stroke="currentColor"
+									fill="none"
 									viewBox="0 0 24 24"
 								>
 									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-									/>
-								</svg>
-							</div>
-							<h4 class="text-lg font-semibold text-gray-900">
-								Character Data
-							</h4>
-						</div>
-
-						<p class="text-sm text-gray-600">
-							Import your character sheet, abilities, and player
-							preferences.
-						</p>
-
-						{#if characterFile}
-							<!-- Selected Character File -->
-							<div
-								class="border border-green-200 bg-green-50 rounded-lg p-4"
-							>
-								<div class="flex items-center justify-between">
-									<div class="flex items-center space-x-3">
-										<svg
-											class="w-8 h-8 text-green-600"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-											/>
-										</svg>
-										<div>
-											<p
-												class="text-sm font-medium text-green-900"
-											>
-												{characterFile.name}
-											</p>
-											<p class="text-xs text-green-700">
-												{(
-													characterFile.size / 1024
-												).toFixed(1)} KB
-											</p>
-										</div>
-									</div>
-									<button
-										type="button"
-										onclick={removeCharacterFile}
-										class="text-green-600 hover:text-green-800 transition-colors"
-										aria-label="Remove character file"
-									>
-										<svg
-											class="w-5 h-5"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M6 18L18 6M6 6l12 12"
-											/>
-										</svg>
-									</button>
-								</div>
-							</div>
-						{:else}
-							<!-- ✅ ISSUE 1 FIX: Enhanced Character File Drop Zone with click handling -->
-							<div
-								class="border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer {characterDragOver
-									? 'border-red-400 bg-red-50'
-									: 'border-gray-300 hover:border-red-400 hover:bg-red-50'}"
-								ondragover={handleCharacterDragOver}
-								ondragleave={handleCharacterDragLeave}
-								ondrop={handleCharacterDrop}
-								onclick={handleCharacterDropZoneClick}
-								role="button"
-								tabindex="0"
-								aria-label="Click to select character file or drag and drop JSON file here"
-							>
-								<svg
-									class="mx-auto h-12 w-12 text-gray-400 mb-4"
-									stroke="currentColor"
-									fill="none"
-									viewBox="0 0 48 48"
-								>
-									<path
 										d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
 										stroke-width="2"
 										stroke-linecap="round"
 										stroke-linejoin="round"
 									/>
 								</svg>
-
-								<div class="space-y-2">
+								<div class="text-left">
 									<p
 										class="text-sm font-medium text-gray-900"
 									>
 										Drop character file here
 									</p>
 									<p class="text-xs text-gray-500">
-										or click to browse
+										or click to browse JSON files
 									</p>
 								</div>
-
-								<!-- ✅ ISSUE 1 FIX: Enhanced file input with proper attributes -->
-								<input
-									bind:this={characterFileInput}
-									type="file"
-									accept=".json,application/json"
-									onchange={handleCharacterFileSelect}
-									class="hidden"
-									aria-hidden="true"
-								/>
-
-								<button
-									type="button"
-									onclick={() => characterFileInput?.click()}
-									class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-								>
-									Choose Character File
-								</button>
 							</div>
-						{/if}
 
-						<div class="text-xs text-gray-500">
-							<p><strong>Character files include:</strong></p>
-							<ul class="list-disc list-inside mt-1 space-y-1">
-								<li>Character sheet and stats</li>
-								<li>Player preferences</li>
-								<li>Character progression</li>
-							</ul>
+							<input
+								bind:this={characterFileInput}
+								type="file"
+								accept=".json,application/json"
+								onchange={handleCharacterFileSelect}
+								class="hidden"
+								aria-hidden="true"
+							/>
 						</div>
+					{/if}
+				</div>
+
+				<!-- ✅ COMPACT CAMPAIGN DATA UPLOAD -->
+				<div class="space-y-3">
+					<div class="flex items-center space-x-2">
+						<div
+							class="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center"
+						>
+							<svg
+								class="w-4 h-4 text-blue-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+								/>
+							</svg>
+						</div>
+						<h4 class="font-medium text-gray-900">Campaign Data</h4>
 					</div>
 
-					<!-- Campaign Data Upload -->
-					<div class="space-y-4">
-						<div class="flex items-center space-x-2">
+					{#if campaignFile}
+						<!-- Selected Campaign File -->
+						<div
+							class="border border-green-200 bg-green-50 rounded-lg p-3"
+						>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center space-x-3">
+									<svg
+										class="w-6 h-6 text-green-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+									<div>
+										<p
+											class="text-sm font-medium text-green-900"
+										>
+											{campaignFile.name}
+										</p>
+										<p class="text-xs text-green-700">
+											{(campaignFile.size / 1024).toFixed(
+												1,
+											)} KB
+										</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									onclick={removeCampaignFile}
+									class="text-green-600 hover:text-green-800 transition-colors"
+									aria-label="Remove campaign file"
+								>
+									<svg
+										class="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+					{:else}
+						<!-- ✅ COMPACT CAMPAIGN DROP ZONE -->
+						<div
+							class="border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer {campaignDragOver
+								? 'border-blue-400 bg-blue-50'
+								: 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}"
+							ondragover={handleCampaignDragOver}
+							ondragleave={handleCampaignDragLeave}
+							ondrop={handleCampaignDrop}
+							onclick={handleCampaignDropZoneClick}
+							role="button"
+							tabindex="0"
+							aria-label="Click to select campaign file or drag and drop JSON file here"
+						>
 							<div
-								class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"
+								class="flex items-center justify-center space-x-3"
 							>
 								<svg
-									class="w-5 h-5 text-blue-600"
-									fill="none"
+									class="w-8 h-8 text-gray-400"
 									stroke="currentColor"
+									fill="none"
 									viewBox="0 0 24 24"
 								>
 									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-									/>
-								</svg>
-							</div>
-							<h4 class="text-lg font-semibold text-gray-900">
-								Campaign Data
-							</h4>
-						</div>
-
-						<p class="text-sm text-gray-600">
-							Import your campaign history, messages, and
-							adventure progress.
-						</p>
-
-						{#if campaignFile}
-							<!-- Selected Campaign File -->
-							<div
-								class="border border-green-200 bg-green-50 rounded-lg p-4"
-							>
-								<div class="flex items-center justify-between">
-									<div class="flex items-center space-x-3">
-										<svg
-											class="w-8 h-8 text-green-600"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-											/>
-										</svg>
-										<div>
-											<p
-												class="text-sm font-medium text-green-900"
-											>
-												{campaignFile.name}
-											</p>
-											<p class="text-xs text-green-700">
-												{(
-													campaignFile.size / 1024
-												).toFixed(1)} KB
-											</p>
-										</div>
-									</div>
-									<button
-										type="button"
-										onclick={removeCampaignFile}
-										class="text-green-600 hover:text-green-800 transition-colors"
-										aria-label="Remove campaign file"
-									>
-										<svg
-											class="w-5 h-5"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M6 18L18 6M6 6l12 12"
-											/>
-										</svg>
-									</button>
-								</div>
-							</div>
-						{:else}
-							<!-- ✅ ISSUE 1 FIX: Enhanced Campaign File Drop Zone with click handling -->
-							<div
-								class="border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer {campaignDragOver
-									? 'border-blue-400 bg-blue-50'
-									: 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}"
-								ondragover={handleCampaignDragOver}
-								ondragleave={handleCampaignDragLeave}
-								ondrop={handleCampaignDrop}
-								onclick={handleCampaignDropZoneClick}
-								role="button"
-								tabindex="0"
-								aria-label="Click to select campaign file or drag and drop JSON file here"
-							>
-								<svg
-									class="mx-auto h-12 w-12 text-gray-400 mb-4"
-									stroke="currentColor"
-									fill="none"
-									viewBox="0 0 48 48"
-								>
-									<path
 										d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
 										stroke-width="2"
 										stroke-linecap="round"
 										stroke-linejoin="round"
 									/>
 								</svg>
-
-								<div class="space-y-2">
+								<div class="text-left">
 									<p
 										class="text-sm font-medium text-gray-900"
 									>
 										Drop campaign file here
 									</p>
 									<p class="text-xs text-gray-500">
-										or click to browse
+										or click to browse JSON files
 									</p>
 								</div>
-
-								<!-- ✅ ISSUE 1 FIX: Enhanced file input with proper attributes -->
-								<input
-									bind:this={campaignFileInput}
-									type="file"
-									accept=".json,application/json"
-									onchange={handleCampaignFileSelect}
-									class="hidden"
-									aria-hidden="true"
-								/>
-
-								<button
-									type="button"
-									onclick={() => campaignFileInput?.click()}
-									class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-								>
-									Choose Campaign File
-								</button>
 							</div>
-						{/if}
 
-						<div class="text-xs text-gray-500">
-							<p><strong>Campaign files include:</strong></p>
-							<ul class="list-disc list-inside mt-1 space-y-1">
-								<li>Chat history and messages</li>
-								<li>Campaign progress</li>
-								<li>Adventure timeline</li>
-							</ul>
+							<input
+								bind:this={campaignFileInput}
+								type="file"
+								accept=".json,application/json"
+								onchange={handleCampaignFileSelect}
+								class="hidden"
+								aria-hidden="true"
+							/>
 						</div>
-					</div>
+					{/if}
 				</div>
 
 				<!-- Import Button -->
 				<div
-					class="flex justify-between items-center pt-6 border-t border-gray-200"
+					class="flex justify-between items-center pt-4 border-t border-gray-200"
 				>
 					<button
 						type="button"
 						onclick={() => dispatch("cancel")}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+						class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
 					>
 						Cancel
 					</button>

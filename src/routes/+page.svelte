@@ -16,6 +16,23 @@
 	let showCharacterSetup = false;
 	let sessionLoaded = false; // ✅ Add loading state
 
+	// ✅ ADD THIS NEW FUNCTION
+	async function storePromptForDebugging(
+		messageId: number,
+		prompt: string,
+		response: string,
+	) {
+		try {
+			await fetch("/api/prompts", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ messageId, prompt, response }),
+			});
+		} catch (error) {
+			console.error("Failed to store prompt for debugging:", error);
+		}
+	}
+
 	// ✅ Wait for session to load before showing character setup
 	$: {
 		if (sessionLoaded) {
@@ -61,6 +78,7 @@
 	async function handleSendMessage(event: CustomEvent<string>) {
 		const messageContent = event.detail;
 
+		// Add user message
 		campaignStore.addMessage({
 			type: "user",
 			content: messageContent,
@@ -110,6 +128,7 @@
 			// Generate AI response using enhanced context
 			const prompt = buildDungeonMasterPrompt(messageContent, context);
 
+			// Make API call
 			const response = await fetch("/api/gemini", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -123,16 +142,32 @@
 
 			const data = await response.json();
 
-			campaignStore.addMessage({
-				type: "assistant",
+			// Add AI response
+			const aiMessage = {
+				type: "assistant" as const,
 				content: data.response,
-			});
+			};
+
+			campaignStore.addMessage(aiMessage);
 
 			// Update character progression
 			await contextManager.updateCharacterProgression(
 				messageContent,
 				data.response,
 			);
+
+			// Store prompt for debugging - get the message ID after adding
+			const currentMessages = messages;
+			const lastMessageId =
+				currentMessages[currentMessages.length - 1]?.id;
+
+			if (lastMessageId) {
+				await storePromptForDebugging(
+					lastMessageId,
+					prompt,
+					data.response,
+				);
+			}
 		} catch (error) {
 			console.error("Enhanced Gemini API Error:", error);
 

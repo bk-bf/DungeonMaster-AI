@@ -1,28 +1,32 @@
-<!-- src/lib/components/character/CharacterSetup.svelte -->
 <script lang="ts">
 	import { PlayerPreferencesForm } from "$lib/components/character";
-	import FileImport from "./FileImport.svelte"; // ✅ Direct import
+	import FileImport from "./FileImport.svelte";
 	import { contextFileManager } from "$lib/services/contextFiles";
 	import { campaignStore } from "$lib/stores/campaigns";
 	import { createEventDispatcher } from "svelte";
 
+	// ✅ USE CREATEEVENTDISPATCHER FOR SVELTE 4 COMPATIBILITY
 	const dispatch = createEventDispatcher<{
-		complete: void;
+		complete: { collaborativeMode: boolean; preferences: any };
 	}>();
 
+	// Component state
 	let currentStep = 1;
 	let showImport = false;
+
+	// Traditional character creation fields
 	let characterName = "";
 	let characterClass = "Fighter";
 	let characterBackground = "Folk Hero";
 
-	// ✅ Add console log to debug
 	function handleImportClick() {
 		console.log("Import button clicked!");
 		showImport = true;
 	}
 
-	async function completeSetup(preferences: any) {
+	async function completeTraditionalSetup(event: CustomEvent) {
+		const preferences = event.detail;
+
 		await contextFileManager.initializeCharacterFiles(
 			characterName,
 			characterClass,
@@ -36,11 +40,20 @@
 			preferences,
 		});
 
-		dispatch("complete");
+		// ✅ DISPATCH EVENT
+		dispatch("complete", { collaborativeMode: false, preferences });
+	}
+
+	function completeCollaborativeSetup(event: CustomEvent) {
+		const preferences = event.detail;
+		// No character files created yet - LLM will handle character creation
+
+		// ✅ DISPATCH EVENT
+		dispatch("complete", { collaborativeMode: true, preferences });
 	}
 
 	function handleImportSuccess(event: CustomEvent) {
-		const { type, data } = event.detail;
+		const { data } = event.detail;
 
 		let message = "";
 		if (data.characterImported && data.campaignImported) {
@@ -55,7 +68,7 @@
 		}
 
 		alert(message);
-		dispatch("complete");
+		dispatch("complete", { collaborativeMode: false, preferences: null });
 	}
 
 	function handleImportError(event: CustomEvent) {
@@ -77,8 +90,8 @@
 	<div
 		class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
 	>
+		<!-- Step 1: Welcome Screen -->
 		{#if currentStep === 1}
-			<!-- Welcome Screen with Import Option -->
 			<div class="p-6">
 				<h2 class="text-2xl font-bold mb-4">
 					🧙‍♂️ Welcome to DungeonMaster AI
@@ -89,9 +102,52 @@
 						Choose how you'd like to begin your adventure:
 					</p>
 
-					<!-- Create New Character -->
+					<!-- Collaborative Creation (Recommended) -->
 					<button
-						onclick={() => (currentStep = 2)}
+						onclick={() => {
+							currentStep = 2;
+						}}
+						class="w-full p-4 border-2 border-green-200 bg-green-50 rounded-lg hover:border-green-300 hover:bg-green-100 transition-colors text-left"
+					>
+						<div class="flex items-center space-x-3">
+							<div
+								class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"
+							>
+								<svg
+									class="w-6 h-6 text-green-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+									/>
+								</svg>
+							</div>
+							<div>
+								<h3 class="font-semibold text-green-800">
+									Collaborative Character Creation
+								</h3>
+								<p class="text-sm text-green-700">
+									<span
+										class="inline-block px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-medium mr-2"
+										>RECOMMENDED</span
+									>
+									Work with the AI to create your perfect character
+									through conversation
+								</p>
+							</div>
+						</div>
+					</button>
+
+					<!-- Traditional Creation -->
+					<button
+						onclick={() => {
+							currentStep = 3;
+						}}
 						class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors text-left"
 					>
 						<div class="flex items-center space-x-3">
@@ -114,11 +170,11 @@
 							</div>
 							<div>
 								<h3 class="font-semibold">
-									Create New Character
+									Traditional Character Creation
 								</h3>
 								<p class="text-sm text-gray-600">
-									Start fresh with a new character and
-									campaign
+									Create your character manually with forms
+									(classic approach)
 								</p>
 							</div>
 						</div>
@@ -160,8 +216,57 @@
 					</button>
 				</div>
 			</div>
-		{:else if currentStep === 2}
-			<!-- Character Basic Info -->
+		{/if}
+
+		<!-- Step 2: Collaborative Mode - Player Preferences -->
+		{#if currentStep === 2}
+			<div class="p-6">
+				<h2 class="text-2xl font-bold mb-4">
+					🎭 Tell Us About Yourself
+				</h2>
+
+				<div
+					class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6"
+				>
+					<div class="flex items-start space-x-3">
+						<svg
+							class="w-5 h-5 text-green-600 mt-0.5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<div>
+							<h3 class="font-medium text-green-800">
+								How Collaborative Creation Works
+							</h3>
+							<p class="text-sm text-green-700 mt-1">
+								After you share your preferences, our AI Dungeon
+								Master will have a conversation with you to
+								create the perfect character together. You'll
+								discuss your character's background, abilities,
+								and story collaboratively!
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<PlayerPreferencesForm
+					collaborativeMode={true}
+					onBack={() => (currentStep = 1)}
+					on:complete={completeCollaborativeSetup}
+				/>
+			</div>
+		{/if}
+
+		<!-- Step 3: Traditional Mode - Character Basic Info -->
+		{#if currentStep === 3}
 			<div class="p-6">
 				<h2 class="text-2xl font-bold mb-4">
 					🧙‍♂️ Create Your Character
@@ -169,10 +274,13 @@
 
 				<div class="space-y-4">
 					<div>
-						<label class="block text-sm font-medium mb-2"
+						<label
+							for="character-name"
+							class="block text-sm font-medium mb-2"
 							>Character Name</label
 						>
 						<input
+							id="character-name"
 							bind:value={characterName}
 							class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500"
 							placeholder="Enter your character's name"
@@ -180,10 +288,12 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium mb-2"
-							>Class</label
+						<label
+							for="character-class"
+							class="block text-sm font-medium mb-2">Class</label
 						>
 						<select
+							id="character-class"
 							bind:value={characterClass}
 							class="w-full px-3 py-2 border rounded-lg"
 						>
@@ -203,10 +313,13 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium mb-2"
+						<label
+							for="character-background"
+							class="block text-sm font-medium mb-2"
 							>Background</label
 						>
 						<select
+							id="character-background"
 							bind:value={characterBackground}
 							class="w-full px-3 py-2 border rounded-lg"
 						>
@@ -224,25 +337,31 @@
 					</div>
 				</div>
 
-				<div class="flex justify-between mt-6">
+				<div class="flex justify-between mt-8">
 					<button
 						onclick={() => (currentStep = 1)}
 						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
 					>
 						← Back
 					</button>
+
 					<button
-						onclick={() => (currentStep = 3)}
-						disabled={!characterName.trim()}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+						onclick={() => (currentStep = 4)}
+						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
 					>
-						Next: Preferences →
+						Next →
 					</button>
 				</div>
 			</div>
-		{:else}
-			<!-- Player Preferences -->
-			<PlayerPreferencesForm on:complete={completeSetup} />
+		{/if}
+
+		<!-- Step 4: Traditional Mode - Player Preferences -->
+		{#if currentStep === 4}
+			<PlayerPreferencesForm
+				collaborativeMode={false}
+				onBack={() => (currentStep = 3)}
+				on:complete={completeTraditionalSetup}
+			/>
 		{/if}
 	</div>
 </div>
