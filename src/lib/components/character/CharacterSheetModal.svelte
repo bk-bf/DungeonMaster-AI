@@ -127,40 +127,53 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<!-- Slide-in panel from right without backdrop -->
+<!-- Slide-in panel from left without backdrop -->
 <div
 	class="fixed inset-y-0 left-80 z-50 w-2/3 max-w-4xl bg-white shadow-2xl border-l border-gray-200"
 	bind:clientWidth={modalWidth}
-	transition:fly={{ x: -modalWidth, duration: 300, opacity: 1 }}
+	transition:fly={{ x: -modalWidth - 300, duration: 300, opacity: 1 }}
 >
-	<div class="h-full flex flex-col">
-		<!-- Header -->
-		<div
-			class="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50"
-		>
-			<div class="flex items-center space-x-2">
-				<svg
-					class="w-4 h-4 text-gray-500"
-					fill="currentColor"
-					viewBox="0 0 16 16"
-				>
-					<path
-						d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"
-					/>
-				</svg>
-				<h2 class="text-lg font-semibold text-gray-900">
-					Character Sheet
-				</h2>
-			</div>
-			<div class="flex items-center space-x-4">
-				<span class="text-xs text-gray-500">character_sheet.md</span>
+	<div class="h-full flex flex-col dnd-beyond-sheet">
+		<!-- Enhanced D&D Beyond-style Header -->
+		<div class="character-header p-6 relative z-10">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center space-x-4">
+					<div
+						class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center border-2 border-white border-opacity-30"
+					>
+						<span class="text-2xl font-bold text-white">
+							{detailedCharacter?.basicInfo.name
+								?.charAt(0)
+								.toUpperCase() || "C"}
+						</span>
+					</div>
+					<div>
+						<div class="character-name">
+							{detailedCharacter?.basicInfo.name ||
+								"Unknown Character"}
+						</div>
+						<div class="character-details">
+							Level {detailedCharacter?.basicInfo.level || 1}
+							{detailedCharacter?.basicInfo.race || "Human"}
+							{detailedCharacter?.basicInfo.class || "Fighter"}
+						</div>
+						<div class="character-details">
+							{detailedCharacter?.basicInfo.background ||
+								"Unknown Background"}
+						</div>
+					</div>
+				</div>
 				<button
-					onclick={() => dispatch("close")}
-					class="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-200 rounded"
+					type="button"
+					on:click={() => {
+						console.log("Close button clicked");
+						dispatch("close");
+					}}
+					class="close-button"
 					aria-label="Close character sheet"
 				>
 					<svg
-						class="w-4 h-4"
+						class="w-5 h-5"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -176,103 +189,37 @@
 			</div>
 		</div>
 
-		<!-- Content area -->
-		<div class="flex-1 overflow-y-auto bg-white">
+		<!-- Content area with D&D Beyond styling -->
+		<div class="flex-1 overflow-y-auto p-6 space-y-6">
 			{#if detailedCharacter}
-				<div class="p-6 space-y-6">
-					<!-- Character Basic Info -->
-					<div
-						class="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6 border border-red-200"
-					>
-						<div
-							class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+				<!-- Ability Scores with D&D Beyond styling -->
+				<div class="section-card">
+					<div class="section-header">
+						<svg
+							class="w-5 h-5 text-blue-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
 						>
-							<div class="text-center">
-								<div class="text-sm font-medium text-gray-600">
-									Character Name
-								</div>
-								<div class="text-xl font-bold text-gray-900">
-									{detailedCharacter.basicInfo.name}
-								</div>
-							</div>
-							<div class="text-center">
-								<div class="text-sm font-medium text-gray-600">
-									Race
-								</div>
-								<div
-									class="text-lg font-semibold text-gray-800"
-								>
-									{detailedCharacter.basicInfo.race}
-								</div>
-							</div>
-							<div class="text-center">
-								<div class="text-sm font-medium text-gray-600">
-									Class
-								</div>
-								<div
-									class="text-lg font-semibold text-gray-800"
-								>
-									{detailedCharacter.basicInfo.class}
-								</div>
-							</div>
-							<div class="text-center">
-								<div class="text-sm font-medium text-gray-600">
-									Level
-								</div>
-								<div class="text-2xl font-bold text-red-600">
-									{detailedCharacter.basicInfo.level}
-								</div>
-							</div>
-							<div class="text-center">
-								<div class="text-sm font-medium text-gray-600">
-									Background
-								</div>
-								<div
-									class="text-lg font-semibold text-gray-800"
-								>
-									{detailedCharacter.basicInfo.background}
-								</div>
-							</div>
-						</div>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+							/>
+						</svg>
+						<h3 class="section-title">Ability Scores</h3>
 					</div>
-
-					<!-- Ability Scores -->
-					<div class="bg-white rounded-lg border border-gray-200 p-6">
-						<h3
-							class="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2"
-						>
-							<svg
-								class="w-5 h-5 text-blue-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-								/>
-							</svg>
-							<span>Ability Scores</span>
-						</h3>
-						<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+					<div class="p-6">
+						<div class="grid grid-cols-3 md:grid-cols-6 gap-4">
 							{#each Object.entries(detailedCharacter.abilityScores) as [ability, data]}
-								<div
-									class="bg-gray-50 rounded-lg p-4 text-center border"
-								>
-									<div
-										class="text-sm font-medium text-gray-600 uppercase"
-									>
-										{ability}
-									</div>
-									<div
-										class="text-2xl font-bold text-gray-900"
-									>
+								<div class="ability-score p-4 text-center">
+									<div class="ability-name">{ability}</div>
+									<div class="ability-value">
 										{(data as any).score}
 									</div>
 									<div
-										class="text-lg font-semibold {getAbilityModifierColor(
+										class="ability-modifier {getAbilityModifierColor(
 											(data as any).modifier,
 										)}"
 									>
@@ -282,178 +229,164 @@
 							{/each}
 						</div>
 					</div>
+				</div>
 
-					<!-- Current Status -->
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<div
-							class="bg-green-50 rounded-lg p-4 border border-green-200"
-						>
-							<div class="flex items-center space-x-2">
-								<svg
-									class="w-5 h-5 text-green-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-									/>
-								</svg>
-								<span class="font-medium text-green-800"
-									>Hit Points</span
-								>
-							</div>
-							<div class="text-2xl font-bold text-green-900 mt-2">
-								{detailedCharacter.status.hitPoints ||
-									"Unknown"}
-							</div>
-						</div>
-
-						<div
-							class="bg-blue-50 rounded-lg p-4 border border-blue-200"
-						>
-							<div class="flex items-center space-x-2">
-								<svg
-									class="w-5 h-5 text-blue-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-									/>
-								</svg>
-								<span class="font-medium text-blue-800"
-									>Armor Class</span
-								>
-							</div>
-							<div class="text-2xl font-bold text-blue-900 mt-2">
-								{detailedCharacter.status.armorClass ||
-									"Unknown"}
-							</div>
-						</div>
-
-						<div
-							class="bg-yellow-50 rounded-lg p-4 border border-yellow-200"
-						>
-							<div class="flex items-center space-x-2">
-								<svg
-									class="w-5 h-5 text-yellow-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M13 10V3L4 14h7v7l9-11h-7z"
-									/>
-								</svg>
-								<span class="font-medium text-yellow-800"
-									>Speed</span
-								>
-							</div>
-							<div
-								class="text-2xl font-bold text-yellow-900 mt-2"
+				<!-- Combat Stats with D&D Beyond styling -->
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div class="status-card hp p-4">
+						<div class="flex items-center">
+							<svg
+								class="status-icon text-green-700"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
 							>
-								{detailedCharacter.status.speed || "Unknown"}
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+								/>
+							</svg>
+							<div>
+								<div class="status-label text-green-800">
+									Hit Points
+								</div>
+								<div class="status-value text-green-900">
+									{detailedCharacter.status.hitPoints ||
+										"Unknown"}
+								</div>
 							</div>
 						</div>
 					</div>
 
-					<!-- Skills & Equipment -->
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-						<!-- Skills -->
-						<div
-							class="bg-white rounded-lg border border-gray-200 p-6"
-						>
-							<h3
-								class="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2"
+					<div class="status-card ac p-4">
+						<div class="flex items-center">
+							<svg
+								class="status-icon text-blue-700"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
 							>
-								<svg
-									class="w-5 h-5 text-purple-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-									/>
-								</svg>
-								<span>Proficient Skills</span>
-							</h3>
-							<div class="space-y-2">
-								{#each detailedCharacter.skills as skill}
-									<div class="flex items-center space-x-2">
-										<div
-											class="w-2 h-2 bg-purple-500 rounded-full"
-										></div>
-										<span class="text-gray-700"
-											>{skill}</span
-										>
-									</div>
-								{/each}
-							</div>
-						</div>
-
-						<!-- Equipment -->
-						<div
-							class="bg-white rounded-lg border border-gray-200 p-6"
-						>
-							<h3
-								class="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2"
-							>
-								<svg
-									class="w-5 h-5 text-orange-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-									/>
-								</svg>
-								<span>Equipment</span>
-							</h3>
-							<div class="space-y-2">
-								{#each detailedCharacter.equipment as item}
-									<div class="flex items-center space-x-2">
-										<div
-											class="w-2 h-2 bg-orange-500 rounded-full"
-										></div>
-										<span class="text-gray-700">{item}</span
-										>
-									</div>
-								{/each}
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+								/>
+							</svg>
+							<div>
+								<div class="status-label text-blue-800">
+									Armor Class
+								</div>
+								<div class="status-value text-blue-900">
+									{detailedCharacter.status.armorClass ||
+										"Unknown"}
+								</div>
 							</div>
 						</div>
 					</div>
 
-					<!-- Character Sheet Raw Data (Collapsible) -->
-					<details
-						class="bg-gray-50 rounded-lg border border-gray-200"
-					>
-						<summary
-							class="p-4 cursor-pointer font-medium text-gray-700 hover:text-gray-900"
-						>
+					<div class="status-card speed p-4">
+						<div class="flex items-center">
+							<svg
+								class="status-icon text-yellow-700"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 10V3L4 14h7v7l9-11h-7z"
+								/>
+							</svg>
+							<div>
+								<div class="status-label text-yellow-800">
+									Speed
+								</div>
+								<div class="status-value text-yellow-900">
+									{detailedCharacter.status.speed ||
+										"Unknown"}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Skills & Equipment with D&D Beyond styling -->
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<!-- Skills -->
+					<div class="section-card">
+						<div class="section-header">
+							<svg
+								class="w-5 h-5 text-purple-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+								/>
+							</svg>
+							<h3 class="section-title">Proficient Skills</h3>
+						</div>
+						<div class="p-6">
+							{#each detailedCharacter.skills as skill}
+								<div class="skill-item">
+									<div class="skill-dot"></div>
+									<span class="text-gray-700 font-medium"
+										>{skill}</span
+									>
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Equipment -->
+					<div class="section-card">
+						<div class="section-header">
+							<svg
+								class="w-5 h-5 text-orange-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+								/>
+							</svg>
+							<h3 class="section-title">Equipment</h3>
+						</div>
+						<div class="p-6">
+							{#each detailedCharacter.equipment as item}
+								<div class="equipment-item">
+									<div class="equipment-dot"></div>
+									<span class="text-gray-700 font-medium"
+										>{item}</span
+									>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+
+				<!-- Raw Data Section with D&D Beyond styling -->
+				<div class="raw-data-section">
+					<details>
+						<summary class="raw-data-summary">
 							View Raw Character Sheet Data
 						</summary>
-						<div class="p-4 border-t border-gray-200">
+						<div class="raw-data-content">
 							<pre
-								class="text-sm text-gray-600 whitespace-pre-wrap">{characterSheet?.content ||
+								class="raw-data-pre">{characterSheet?.content ||
 									"No character sheet data available"}</pre>
 						</div>
 					</details>
@@ -485,3 +418,258 @@
 		</div>
 	</div>
 </div>
+
+<!-- Enhanced D&D Beyond-style CSS -->
+<style>
+	.dnd-beyond-sheet {
+		font-family: "Roboto", "Helvetica Neue", Arial, sans-serif;
+		background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	}
+
+	.character-header {
+		background: linear-gradient(
+			135deg,
+			#8b0000 0%,
+			#dc143c 50%,
+			#b22222 100%
+		);
+		color: white;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.character-header::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
+			repeat;
+		opacity: 0.1;
+	}
+
+	.stat-card {
+		background: white;
+		border: 2px solid #e9ecef;
+		border-radius: 8px;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.stat-card:hover {
+		border-color: #dc143c;
+		box-shadow: 0 4px 12px rgba(220, 20, 60, 0.15);
+		transform: translateY(-1px);
+	}
+
+	.ability-score {
+		background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+		border: 3px solid #e9ecef;
+		border-radius: 12px;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.ability-score::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		background: linear-gradient(90deg, #dc143c, #8b0000);
+	}
+
+	.ability-name {
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: #6c757d;
+		margin-bottom: 4px;
+	}
+
+	.ability-value {
+		font-size: 28px;
+		font-weight: 900;
+		color: #212529;
+		line-height: 1;
+		margin-bottom: 2px;
+	}
+
+	.ability-modifier {
+		font-size: 14px;
+		font-weight: 600;
+		padding: 2px 8px;
+		border-radius: 12px;
+		background: #f8f9fa;
+		border: 1px solid #dee2e6;
+	}
+
+	.status-card {
+		border-radius: 12px;
+		position: relative;
+		overflow: hidden;
+		border: 2px solid;
+		background: white;
+	}
+
+	.status-card.hp {
+		border-color: #28a745;
+		background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+	}
+
+	.status-card.ac {
+		border-color: #007bff;
+		background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+	}
+
+	.status-card.speed {
+		border-color: #ffc107;
+		background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+	}
+
+	.status-icon {
+		width: 24px;
+		height: 24px;
+		margin-right: 8px;
+	}
+
+	.status-label {
+		font-size: 12px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		margin-bottom: 4px;
+	}
+
+	.status-value {
+		font-size: 24px;
+		font-weight: 900;
+		line-height: 1;
+	}
+
+	.section-card {
+		background: white;
+		border: 2px solid #e9ecef;
+		border-radius: 12px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		overflow: hidden;
+	}
+
+	.section-header {
+		background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+		border-bottom: 2px solid #dee2e6;
+		padding: 16px 20px;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.section-title {
+		font-size: 16px;
+		font-weight: 700;
+		color: #495057;
+		margin: 0;
+	}
+
+	.skill-item,
+	.equipment-item {
+		padding: 8px 0;
+		border-bottom: 1px solid #f8f9fa;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		transition: background-color 0.2s ease;
+	}
+
+	.skill-item:hover,
+	.equipment-item:hover {
+		background-color: #f8f9fa;
+	}
+
+	.skill-item:last-child,
+	.equipment-item:last-child {
+		border-bottom: none;
+	}
+
+	.skill-dot,
+	.equipment-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.skill-dot {
+		background: #6f42c1;
+	}
+
+	.equipment-dot {
+		background: #fd7e14;
+	}
+
+	.character-name {
+		font-size: 24px;
+		font-weight: 900;
+		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+		margin-bottom: 4px;
+	}
+
+	.character-details {
+		font-size: 14px;
+		opacity: 0.9;
+		font-weight: 500;
+	}
+
+	.close-button {
+		background: rgba(255, 255, 255, 0.2);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		color: white;
+		border-radius: 6px;
+		padding: 8px;
+		transition: all 0.2s ease;
+	}
+
+	.close-button:hover {
+		background: rgba(255, 255, 255, 0.3);
+		border-color: rgba(255, 255, 255, 0.5);
+	}
+
+	.raw-data-section {
+		background: #f8f9fa;
+		border: 2px solid #e9ecef;
+		border-radius: 12px;
+		overflow: hidden;
+	}
+
+	.raw-data-summary {
+		padding: 16px 20px;
+		background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+		cursor: pointer;
+		font-weight: 600;
+		color: #495057;
+		transition: background-color 0.2s ease;
+	}
+
+	.raw-data-summary:hover {
+		background: linear-gradient(135deg, #dee2e6 0%, #ced4da 100%);
+	}
+
+	.raw-data-content {
+		padding: 20px;
+		border-top: 2px solid #dee2e6;
+		background: white;
+	}
+
+	.raw-data-pre {
+		font-size: 12px;
+		color: #6c757d;
+		white-space: pre-wrap;
+		line-height: 1.4;
+		margin: 0;
+		font-family: "Consolas", "Monaco", "Courier New", monospace;
+	}
+</style>
