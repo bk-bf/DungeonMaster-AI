@@ -1,0 +1,1 @@
+- Character Sheet Close button doesnt work
