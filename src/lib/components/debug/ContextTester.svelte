@@ -295,7 +295,7 @@ ${data.response}
 	<div class="space-y-4 mb-6">
 		<!-- Show current REAL data -->
 		<div class="bg-blue-50 p-4 rounded-lg">
-			<h3 class="font-semibold mb-2">Current REAL Data:</h3>
+			<h3 class="font-semibold mb-2">Current Data:</h3>
 			<p>
 				<strong>Character:</strong>
 				{realCharacterData.name} (Level {realCharacterData.level}

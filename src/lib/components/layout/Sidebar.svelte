@@ -68,16 +68,35 @@
 			return null;
 		}
 
+		console.log(
+			"📝 Parsing character info from markdown:",
+			markdown.substring(0, 100) + "...",
+		);
+
+		// ✅ Fix regex patterns to match your actual format
 		const nameMatch = markdown.match(/\*\*Name\*\*:\s*(.+)/);
-		const classMatch = markdown.match(/\*\*Class\*\*:\s*(.+)/);
+		const classMatch = markdown.match(
+			/\*\*Class\*\*:\s*(.+?)(?:\s*⚔️|\s*🗡️|\s*🏹|\s*📚)/,
+		); // Stop at emoji
 		const levelMatch = markdown.match(/\*\*Level\*\*:\s*(\d+)/);
+		const backgroundMatch = markdown.match(
+			/\*\*Background\*\*:\s*(.+?)(?:\s*🎭|\s*👤)/,
+		); // Stop at emoji
+		const raceMatch = markdown.match(/\*\*Race\*\*:\s*(.+?)(?:\s*👤)/);
+		const alignmentMatch = markdown.match(
+			/\*\*Alignment\*\*:\s*(.+?)(?:\s*😇|\s*😈)/,
+		);
 
 		const result = {
-			name: nameMatch?.[1]?.trim() || "Unknown",
-			class: classMatch?.[1]?.trim() || "Unknown",
-			level: levelMatch?.[1] ? parseInt(levelMatch[1]) : 1,
+			name: nameMatch ? nameMatch[1].trim() : "Unknown",
+			class: classMatch ? classMatch[1].trim() : "Unknown",
+			level: levelMatch ? parseInt(levelMatch[1]) : 1,
+			background: backgroundMatch ? backgroundMatch[1].trim() : "Unknown",
+			race: raceMatch ? raceMatch[1].trim() : "Unknown",
+			alignment: alignmentMatch ? alignmentMatch[1].trim() : "Unknown",
 		};
 
+		console.log("✅ Parsed character data:", result);
 		return result;
 	}
 

@@ -17,13 +17,15 @@
 	$: contextFiles = contextFileManager.getAllFiles();
 	$: characterSheet = contextFiles.find((f) => f.id === "character_sheet");
 
-	// Configure marked for GitHub-style rendering
+	// Configure marked for enhanced GitHub-style rendering with emoji support
 	onMount(() => {
 		marked.setOptions({
 			breaks: true,
 			gfm: true,
-			//anitize: false,
-			//martypants: true,
+			//sanitize: false,
+			//smartypants: true,
+			// Enable emoji parsing
+			renderer: new marked.Renderer(),
 		});
 	});
 
@@ -124,7 +126,7 @@
 	</div>
 </div>
 
-<!-- GitHub-style CSS (same as before) -->
+<!-- Enhanced GitHub-style CSS with D&D optimizations -->
 <style>
 	.github-markdown {
 		box-sizing: border-box;
@@ -134,7 +136,7 @@
 		padding: 45px;
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
 			Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-		font-size: 16px;
+		font-size: 14px; /* Slightly smaller for more content */
 		line-height: 1.5;
 		word-wrap: break-word;
 		background-color: #ffffff;
@@ -161,6 +163,9 @@
 		font-weight: 600;
 		line-height: 1.25;
 		color: #1f2328;
+		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 
 	.github-markdown h3 {
@@ -170,11 +175,14 @@
 		font-weight: 600;
 		line-height: 1.25;
 		color: #1f2328;
+		display: flex;
+		align-items: center;
+		gap: 6px;
 	}
 
 	.github-markdown p {
 		margin-top: 0;
-		margin-bottom: 16px;
+		margin-bottom: 8px; /* Compact paragraph spacing for character info */
 	}
 
 	.github-markdown ul,
@@ -185,7 +193,8 @@
 	}
 
 	.github-markdown li {
-		margin-bottom: 0.25em;
+		margin-bottom: 4px; /* Better list styling for equipment and features */
+		line-height: 1.4;
 	}
 
 	.github-markdown strong {
@@ -222,26 +231,30 @@
 		margin-bottom: 16px;
 	}
 
+	/* Enhanced table styling for D&D stats */
 	.github-markdown table {
 		border-spacing: 0;
 		border-collapse: collapse;
-		display: block;
-		width: max-content;
+		width: 100%;
+		margin: 16px 0;
+		font-size: 14px;
 		max-width: 100%;
 		overflow: auto;
-		margin-top: 0;
-		margin-bottom: 16px;
-	}
-
-	.github-markdown table th,
-	.github-markdown table td {
-		padding: 6px 13px;
-		border: 1px solid #d1d9e0;
+		display: table; /* Override block display */
 	}
 
 	.github-markdown table th {
 		font-weight: 600;
 		background-color: #f6f8fa;
+		text-align: center;
+		padding: 8px 12px;
+		border: 1px solid #d1d9e0;
+	}
+
+	.github-markdown table td {
+		text-align: center;
+		padding: 6px 12px;
+		border: 1px solid #d1d9e0;
 	}
 
 	.github-markdown table tr {
@@ -251,6 +264,25 @@
 
 	.github-markdown table tr:nth-child(2n) {
 		background-color: #f6f8fa;
+	}
+
+	/* Add a specific class for ability score tables if needed */
+	.github-markdown .ability-table {
+		max-width: 500px;
+		margin: 16px auto;
+	}
+
+	/* Highlight important stats */
+	.github-markdown table td:first-child {
+		font-weight: 500;
+		text-align: left;
+		padding-left: 16px;
+	}
+
+	/* Better spacing for sections */
+	.github-markdown h2 + ul,
+	.github-markdown h3 + ul {
+		margin-top: 8px;
 	}
 
 	.github-markdown blockquote {

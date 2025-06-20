@@ -234,55 +234,111 @@ class ContextFileManager {
 
 	// ✅ FIX: Update to accept actual character data
 	private generateCharacterSheetMD(characterName: string, characterClass: string, characterBackground: string): string {
-		return `# ${characterName} - Character Sheet
+		return `# ${characterName} - Character Sheet 📜
 
-## Basic Information
-- **Name**: ${characterName}
-- **Race**: Human
-- **Class**: ${characterClass}
-- **Level**: 1
-- **Background**: ${characterBackground}
+## **Basic Information** ℹ️
+- **Name:** ${characterName}
+- **Race:** Human (Variant) 👤
+- **Class:** ${characterClass} ⚔️
+- **Level:** 1 ⭐
+- **Current XP:** 0/300
+- **Background:** ${characterBackground} 🎭
+- **Alignment:** Chaotic Good 😇
+- **Age:** 25
+- **Height:** 5'10"
+- **Weight:** 165 lbs
+- **Current Gold:** 15 gp 💰
 
-## Ability Scores
-- **Strength**: 12 (+1)
-- **Dexterity**: 16 (+3)
-- **Constitution**: 14 (+2)
-- **Intelligence**: 13 (+1)
-- **Wisdom**: 12 (+1)
-- **Charisma**: 10 (+0)
+## **Ability Scores** 💪
+| Ability | Score | Modifier |
+|---------|-------|----------|
+| **Strength** 💪 | 12 | +1 |
+| **Dexterity** 🏃 | 16 | +3 |
+| **Constitution** ❤️ | 14 | +2 |
+| **Intelligence** 🧠 | 13 | +1 |
+| **Wisdom** 👁️ | 12 | +1 |
+| **Charisma** 💬 | 10 | +0 |
 
-## Skills & Proficiencies
-- **Proficient Skills**: Stealth, Sleight of Hand, Investigation, Perception
-- **Languages**: Common, Thieves' Cant
-- **Tools**: Thieves' Tools, Forgery Kit
+## **Combat Stats** ⚔️
+- **Armor Class:** 13 🛡️ (Leather Armor + Dex)
+- **Hit Points:** 10 ❤️
+- **Speed:** 30 feet 🏃‍♂️
+- **Proficiency Bonus:** +2 ✨
 
-## Current Status
-- **Hit Points**: 10/10
-- **Armor Class**: 13 (Leather Armor + Dex)
-- **Speed**: 30 feet
+## **Saving Throws** 🎲
+- **Dexterity:** +5 🏃 (Proficient)
+- **Intelligence:** +3 🧠 (Proficient)
 
-## Equipment
-- Shortsword
-- Shortbow with 20 arrows
-- Leather armor
-- Thieves' tools
-- Backpack with basic supplies
+## **Skills** 🎯
+- **Acrobatics (Dex):** +3 🤸‍♂️
+- **Investigation (Int):** +5 🔍 (Proficient + Expertise)
+- **Perception (Wis):** +3 👀 (Proficient)
+- **Sleight of Hand (Dex):** +5 🤲 (Proficient)
+- **Stealth (Dex):** +7 🥷 (Proficient + Expertise)
+
+## **Languages** 🗣️
+- **Common**
+- **Thieves' Cant** 🤫
+
+## **Features & Traits** ⭐
+
+### **Rogue Features:** 🗡️
+- **Expertise:** Investigation 🔍, Stealth 🥷 (double proficiency bonus)
+- **Sneak Attack:** **1d6** damage ⚡
+- **Thieves' Cant:** Secret language of rogues and criminals 🤫
+
+### **${characterBackground} Features:** 🎭
+- **Background Feature:** Varies by background 🛠️
+
+## **Equipment** 🎒
+
+### **Weapons:** ⚔️
+- Shortsword 🗡️ (1d6+3 piercing, finesse)
+- Shortbow + 20 arrows 🏹 (1d6+3 piercing, range 80/320)
+- 2 daggers 🗡️ (1d4+3 piercing, finesse, light, thrown 20/60)
+
+### **Armor & Protection:** 🛡️
+- Leather armor 🦺 (AC 11 + Dex modifier)
+
+### **Adventuring Gear:** 🎒
+- **Burglar's pack** 🎒 (backpack, bag of 1000 ball bearings, 10 feet of string, bell, 5 candles, crowbar, hammer, 10 pitons, hooded lantern, 2 flasks of oil, 5 days rations, tinderbox, waterskin, 50 feet hempen rope)
+- **Thieves' tools** 🔧
+- **Leather armor** 🦺
+
+## **Personality Traits** 🎭
+- **Trait 1:** I always have a plan for what to do when things go wrong 🧠
+- **Trait 2:** I am always calm, no matter what the situation 😌
+
+## **Ideals** 💡
+- **Freedom:** Chains are meant to be broken, as are those who would forge them ⛓️‍💥
+
+## **Bonds** 💖
+- **My tools:** My tools are symbols of my past life, and I carry them so that I will never forget my roots 🔧
+
+## **Flaws** ⚠️
+- **Trust:** I have trouble trusting in my allies 🤝❌
 
 *Last Updated: ${new Date().toISOString()}*`;
 	}
 
 	private generateProgressionMD(): string {
-		return `# Character Progression Log
+		return `# Character Progression & Growth
 
-## Experience & Growth
-- **Current XP**: 0
-- **Next Level**: 300 XP needed
-- **Milestone Events**: None yet
+## Experience & Leveling
+- **Current Level:** 1
+- **Current XP:** 0/300
+- **Next Level:** 2
 
-## Recent Activities
-*No activities recorded yet.*
+## Milestone Achievements
+*No achievements yet - will be updated as character progresses.*
 
-*Character progression will be automatically tracked as you play.*`;
+## Skills Development
+*Character skills will be tracked here as they improve.*
+
+## Story Progression
+*Key story moments and character development will be recorded here.*
+
+*Last Updated: ${new Date().toISOString()}*`;
 	}
 
 	private generateSpellBookMD(): string {
@@ -303,6 +359,26 @@ class ContextFileManager {
 - Secret language known by rogues and criminals
 
 *Last Updated: ${new Date().toISOString()}*`;
+
+	}
+
+	upgradeCharacterSheetFormat(characterId: string = 'character_sheet') {
+		const file = this.files.get(characterId);
+		if (!file) return;
+
+		// Parse existing data
+		const content = file.content;
+		const name = content.match(/# (.+?) - Character Sheet/)?.[1] || 'Unknown';
+		const classMatch = content.match(/\*\*Class\*\*:\s*(.+)/)?.[1] || 'Fighter';
+		const backgroundMatch = content.match(/\*\*Background\*\*:\s*(.+)/)?.[1] || 'Folk Hero';
+
+		// Generate new format
+		const newContent = this.generateCharacterSheetMD(name, classMatch, backgroundMatch);
+
+		// Update the file
+		file.content = newContent;
+		file.lastUpdated = new Date();
+		this.saveToStorage();
 	}
 
 	// Save files to localStorage
@@ -351,6 +427,33 @@ class ContextFileManager {
 		document.body.removeChild(link);
 		URL.revokeObjectURL(url);
 	}
-}
 
+	extractCharacterFromContextFiles(contextFiles: ContextFile[]): any {
+		const characterSheet = contextFiles.find(file => file.id === 'character_sheet');
+
+		if (!characterSheet) {
+			return {
+				name: 'Unknown Adventurer',
+				class: 'Unknown Class',
+				level: 'Unknown Level',
+				background: 'Unknown Background',
+			};
+		}
+
+		const content = characterSheet.content;
+
+		// ✅ Use the same parsing logic as Sidebar
+		const nameMatch = content.match(/\*\*Name\*\*:\s*(.+)/);
+		const classMatch = content.match(/\*\*Class\*\*:\s*(.+?)(?:\s*⚔️|\s*🗡️|\s*🏹|\s*📚)/);
+		const levelMatch = content.match(/\*\*Level\*\*:\s*(\d+)/);
+		const backgroundMatch = content.match(/\*\*Background\*\*:\s*(.+?)(?:\s*🎭|\s*👤)/);
+
+		return {
+			name: nameMatch ? nameMatch[1].trim() : 'Unknown Adventurer',
+			class: classMatch ? classMatch[1].trim() : 'Unknown Class',
+			level: levelMatch ? parseInt(levelMatch[1]) : 1,
+			background: backgroundMatch ? backgroundMatch[1].trim() : 'Unknown Background',
+		}
+	}
+}
 export const contextFileManager = new ContextFileManager();
