@@ -162,6 +162,7 @@ function createPersistedCampaignStore() {
 			class: string;
 			background: string;
 			preferences: PlayerPreferences;
+			creationMethod?: 'standard' | 'quick' | 'random'; // ✅ Add this line
 		}) => {
 			update(store => ({
 				...store,
@@ -172,7 +173,8 @@ function createPersistedCampaignStore() {
 							characterName: characterInfo.name,
 							characterClass: characterInfo.class,
 							characterBackground: characterInfo.background,
-							playerPreferences: characterInfo.preferences
+							playerPreferences: characterInfo.preferences,
+							creationMethod: characterInfo.creationMethod // ✅ Add this line
 						}
 						: campaign
 				)
