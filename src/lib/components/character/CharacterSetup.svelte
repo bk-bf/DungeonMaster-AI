@@ -101,13 +101,14 @@
 	let finalSkillProficiencies: SkillProficiency[] = []; // ✅ NEW: Final resolved skills
 	let skillReplacements: Record<string, string> = {}; // ✅ NEW: Overlap replacements
 	let equipmentMethod: "class" | "gold" | null = null; // ✅ NEW: Equipment method selection
-	let startingGold: number = 0; // ✅ NEW: Rolled starting gold
 	let equipmentChoices: Record<string, string> = {}; // ✅ NEW: Player equipment choices
 	let finalEquipment: Equipment[] = []; // ✅ NEW: Final equipment list
 	let canReroll: boolean = true; // ✅ NEW: Controls if reroll is allowed for gold
 	let equipmentLocked = false; // Prevent going back after gold choice
 	let selectedWeapons: string[] = [];
 	let selectedEquipment: string[] = [];
+	let selectedCategory: string = "all";
+	let startingGold: number = 0;
 
 	// ✅ BACKGROUND SKILL DATA - skills granted by backgrounds
 	const BACKGROUND_SKILLS: Record<string, string[]> = {
@@ -135,7 +136,7 @@
 		"Half-Orc": [],
 		Tiefling: [],
 	};
-
+	// ✅ EQUIPMENT SELECTION FUNCTION
 	function selectEquipment(equipment: Equipment) {
 		if (selectedEquipment.includes(equipment.name)) {
 			selectedEquipment = selectedEquipment.filter(
@@ -146,6 +147,111 @@
 		}
 		console.log("Selected equipment:", selectedEquipment);
 	}
+	// ✅ CATEGORY FILTERING
+	function getFilteredEquipment(): Equipment[] {
+		switch (selectedCategory) {
+			case "weapons":
+				return [
+					...MARTIAL_MELEE_WEAPONS,
+					...SIMPLE_WEAPONS,
+					...RANGED_WEAPONS,
+				];
+			case "armor":
+				return ARMOR;
+			case "tools":
+				return TOOLS_AND_KITS;
+			case "gear":
+				return ADVENTURING_GEAR;
+			case "packs":
+				return EQUIPMENT_PACKS;
+			case "all":
+			default:
+				return ALL_EQUIPMENT;
+		}
+	}
+	// ✅ PROFICIENCY CHECKING
+	function isEquipmentProficient(equipment: Equipment): boolean {
+		if (!selectedClass) return false;
+
+		// Check weapon proficiency
+		if (equipment.type === "weapon") {
+			return selectedClass.weaponProficiency.some((prof) => {
+				if (
+					prof.includes("Simple weapons") &&
+					SIMPLE_WEAPONS.includes(equipment)
+				)
+					return true;
+				if (
+					prof.includes("Martial weapons") &&
+					MARTIAL_MELEE_WEAPONS.includes(equipment)
+				)
+					return true;
+				if (prof.includes("All weapons")) return true;
+				return false;
+			});
+		}
+
+		// Check armor proficiency
+		if (equipment.type === "armor") {
+			return selectedClass.armorProficiency.some((prof) => {
+				if (
+					prof.includes("Light armor") &&
+					equipment.properties?.includes("Light")
+				)
+					return true;
+				if (
+					prof.includes("Medium armor") &&
+					equipment.properties?.includes("Medium")
+				)
+					return true;
+				if (
+					prof.includes("Heavy armor") &&
+					equipment.properties?.includes("Heavy")
+				)
+					return true;
+				if (
+					prof.includes("Shields") &&
+					equipment.properties?.includes("Shield")
+				)
+					return true;
+				return false;
+			});
+		}
+
+		// Tools, gear, and packs are generally available to everyone
+		return true;
+	}
+	// ✅ AFFORDABILITY CHECKING
+	function canAffordEquipment(equipment: Equipment): boolean {
+		if (!startingGold) {
+			startingGold = selectedClass
+				? rollStartingGold(selectedClass.name)
+				: 50;
+		}
+
+		// Parse cost string (e.g., "15 gp", "5 sp")
+		const costMatch = equipment.cost.match(/(\d+)\s*(gp|sp|cp)/);
+		if (!costMatch) return true; // Free items
+
+		const amount = parseInt(costMatch[1]);
+		const currency = costMatch[2];
+
+		let costInGold = 0;
+		switch (currency) {
+			case "gp":
+				costInGold = amount;
+				break;
+			case "sp":
+				costInGold = amount / 10;
+				break;
+			case "cp":
+				costInGold = amount / 100;
+				break;
+		}
+
+		return startingGold >= costInGold;
+	}
+
 	// ✅ SKILL CONFLICT DETECTION FUNCTION
 	function checkSkillConflicts(
 		selectedSkills: string[],
@@ -1592,8 +1698,7 @@
 											disabled={isDisabled}
 											class="text-xs px-2 py-1 rounded border-2 transition-all focus:outline-none focus:ring-1 focus:ring-blue-300"
 											class:border-blue-500={isSelected}
-											class:bg-blue-100={isSelected}
-											class:text-blue-700={isSelected}
+											class:text-blue-500={isSelected}
 											class:border-gray-200={!isSelected &&
 												!isDisabled}
 											class:bg-white={!isSelected &&
@@ -1601,8 +1706,6 @@
 											class:text-gray-700={!isSelected &&
 												!isDisabled}
 											class:hover:border-blue-300={!isSelected &&
-												!isDisabled}
-											class:hover:bg-blue-50={!isSelected &&
 												!isDisabled}
 											class:border-gray-100={isDisabled}
 											class:bg-gray-50={isDisabled}
@@ -2675,169 +2778,363 @@
 				</div>
 			</div>
 		{/if}
-		<!-- ✅ STEP 8: ALL EQUIPMENT SELECTION -->
+		<!-- ✅ STEP 8: EQUIPMENT SELECTION - Small cards with hover expansion -->
 		{#if currentStep === 8}
 			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					⚔️ Choose Your Equipment
-					{#if creationMethod === "quick"}
-						<span class="text-sm font-normal text-green-600"
-							>(Quick Build)</span
-						>
-					{:else if creationMethod === "random"}
-						<span class="text-sm font-normal text-purple-600"
-							>(Random)</span
-						>
-					{:else}
-						<span class="text-sm font-normal text-blue-600"
-							>(Standard)</span
-						>
-					{/if}
-				</h2>
-
-				<p class="text-gray-600 mb-6">
-					Your equipment determines your character's capabilities and
-					survival in adventures.
-				</p>
-
-				<!-- Equipment Grid - displays all equipment with consistent alignment -->
-				<div
-					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
-				>
-					{#each ALL_EQUIPMENT as equipment}
-						{@const isSelected = selectedEquipment?.includes(
-							equipment.name,
-						)}
-
-						<button
-							onclick={() => selectEquipment(equipment)}
-							disabled={creationMethod === "random"}
-							class="h-full p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 flex flex-col"
-							class:border-blue-500={isSelected}
-							class:bg-blue-50={isSelected}
-							class:border-gray-200={!isSelected}
-							class:hover:border-blue-300={!isSelected &&
-								creationMethod !== "random"}
-							class:bg-gray-100={creationMethod === "random"}
-							class:cursor-not-allowed={creationMethod ===
-								"random"}
-						>
-							<!-- Equipment Header -->
-							<div
-								class="flex items-center justify-between mb-2 min-h-[2rem]"
-							>
-								<div class="flex items-center space-x-2">
-									<span
-										class="text-xl"
-										role="img"
-										aria-label="{equipment.name} emoji"
-									>
-										{equipment.emoji}
-									</span>
-									<h3
-										class="font-semibold text-lg leading-tight"
-									>
-										{equipment.name}
-									</h3>
-								</div>
-
-								<div class="flex-shrink-0">
-									{#if isSelected}
-										<svg
-											class="w-5 h-5 text-blue-500"
-											fill="currentColor"
-											viewBox="0 0 20 20"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									{:else}
-										<div class="w-5 h-5"></div>
-									{/if}
-								</div>
-							</div>
-
-							<!-- Equipment Description -->
-							<div class="flex-grow">
-								<p
-									class="text-sm text-gray-600 mb-3 min-h-[2.5rem] leading-relaxed"
+				<!-- Header with Gold Display -->
+				<div class="flex justify-between items-start mb-4">
+					<div>
+						<h2 class="text-2xl font-bold">
+							⚔️ Choose Your Equipment
+							{#if creationMethod === "quick"}
+								<span class="text-sm font-normal text-green-600"
+									>(Quick Build)</span
 								>
-									{equipment.description}
-								</p>
+							{:else if creationMethod === "random"}
+								<span
+									class="text-sm font-normal text-purple-600"
+									>(Random)</span
+								>
+							{:else}
+								<span class="text-sm font-normal text-blue-600"
+									>(Standard)</span
+								>
+							{/if}
+						</h2>
+						<p class="text-gray-600 mt-2">
+							Your equipment determines your character's
+							capabilities and survival in adventures.
+						</p>
+					</div>
 
-								<!-- Equipment Stats -->
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										{#if equipment.damage}
-											Damage
-										{:else if equipment.armorClass}
-											Armor Class
-										{:else}
-											Type
-										{/if}
-									</div>
-									<div
-										class="text-sm font-medium text-green-600"
-									>
-										{equipment.damage ||
-											equipment.armorClass ||
-											equipment.type}
-									</div>
-								</div>
-
-								<!-- Properties -->
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Properties
-									</div>
-									<div
-										class="flex flex-wrap gap-1 min-h-[1.5rem]"
-									>
-										{#each equipment.properties?.slice(0, 3) || [] as property}
-											<span
-												class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
-											>
-												{property}
-											</span>
-										{/each}
-										{#if equipment.properties && equipment.properties.length > 3}
-											<span
-												class="text-xs text-gray-500 px-2 py-1"
-											>
-												+{equipment.properties.length -
-													3} more
-											</span>
-										{/if}
-									</div>
-								</div>
+					<!-- Gold Display Top Right -->
+					{#if selectedClass}
+						<div
+							class="text-right bg-yellow-50 border border-yellow-200 rounded-lg p-3"
+						>
+							<div class="text-sm text-yellow-700 mb-1">
+								Starting Gold
 							</div>
-
-							<!-- Cost and Weight -->
-							<div
-								class="text-xs text-gray-500 mt-auto pt-2 border-t border-gray-100"
+							<div class="text-xl font-bold text-yellow-600">
+								{startingGold ||
+									rollStartingGold(selectedClass.name)} gp
+							</div>
+							<div class="text-xs text-yellow-600">
+								{STARTING_GOLD[selectedClass.name]?.formula ||
+									"2d4 × 10 gp"}
+							</div>
+							<button
+								onclick={() =>
+									(startingGold = rollStartingGold(
+										selectedClass?.name ?? "",
+									))}
+								class="mt-1 px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700"
 							>
-								<div class="flex items-center justify-between">
-									<span
-										>Cost: <span class="font-medium"
-											>{equipment.cost}</span
-										></span
+								🎲 Reroll
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Equipment Categories -->
+				<div class="mb-6">
+					<div class="flex flex-wrap gap-2 mb-4">
+						<button
+							onclick={() => (selectedCategory = "all")}
+							class="px-3 py-1 rounded-full text-sm transition-all"
+							class:bg-blue-500={selectedCategory === "all"}
+							class:text-white={selectedCategory === "all"}
+							class:bg-gray-200={selectedCategory !== "all"}
+							class:text-gray-700={selectedCategory !== "all"}
+						>
+							All Equipment
+						</button>
+						<button
+							onclick={() => (selectedCategory = "weapons")}
+							class="px-3 py-1 rounded-full text-sm transition-all"
+							class:bg-blue-500={selectedCategory === "weapons"}
+							class:text-white={selectedCategory === "weapons"}
+							class:bg-gray-200={selectedCategory !== "weapons"}
+							class:text-gray-700={selectedCategory !== "weapons"}
+						>
+							⚔️ Weapons
+						</button>
+						<button
+							onclick={() => (selectedCategory = "armor")}
+							class="px-3 py-1 rounded-full text-sm transition-all"
+							class:bg-blue-500={selectedCategory === "armor"}
+							class:text-white={selectedCategory === "armor"}
+							class:bg-gray-200={selectedCategory !== "armor"}
+							class:text-gray-700={selectedCategory !== "armor"}
+						>
+							🛡️ Armor
+						</button>
+						<button
+							onclick={() => (selectedCategory = "tools")}
+							class="px-3 py-1 rounded-full text-sm transition-all"
+							class:bg-blue-500={selectedCategory === "tools"}
+							class:text-white={selectedCategory === "tools"}
+							class:bg-gray-200={selectedCategory !== "tools"}
+							class:text-gray-700={selectedCategory !== "tools"}
+						>
+							🔧 Tools
+						</button>
+						<button
+							onclick={() => (selectedCategory = "gear")}
+							class="px-3 py-1 rounded-full text-sm transition-all"
+							class:bg-blue-500={selectedCategory === "gear"}
+							class:text-white={selectedCategory === "gear"}
+							class:bg-gray-200={selectedCategory !== "gear"}
+							class:text-gray-700={selectedCategory !== "gear"}
+						>
+							🎒 Gear
+						</button>
+						<button
+							onclick={() => (selectedCategory = "packs")}
+							class="px-3 py-1 rounded-full text-sm transition-all"
+							class:bg-blue-500={selectedCategory === "packs"}
+							class:text-white={selectedCategory === "packs"}
+							class:bg-gray-200={selectedCategory !== "packs"}
+							class:text-gray-700={selectedCategory !== "packs"}
+						>
+							📦 Packs
+						</button>
+					</div>
+				</div>
+
+				<!-- ✅ COMPACT EQUIPMENT CARDS - Small cards with hover expansion -->
+				<div class="p-4 bg-gray-50 rounded-lg">
+					<div class="flex items-center justify-between mb-3">
+						<h4 class="font-medium text-gray-800">
+							Available Equipment
+						</h4>
+						<!-- ✅ Equipment counter in top right -->
+						<div class="flex items-center space-x-1">
+							<span class="text-sm text-gray-600">
+								{selectedEquipment.length} selected
+							</span>
+							{#if selectedEquipment.length > 0}
+								<svg
+									class="w-4 h-4 text-green-500"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							{/if}
+						</div>
+					</div>
+
+					<!-- ✅ COMPACT EQUIPMENT CARDS - Same size as skill badges with hover expansion -->
+					<div class="flex flex-wrap gap-1">
+						{#each getFilteredEquipment() as equipment}
+							{@const isSelected = selectedEquipment?.includes(
+								equipment.name,
+							)}
+							{@const canAfford = canAffordEquipment(equipment)}
+							{@const isProficient =
+								isEquipmentProficient(equipment)}
+							{@const isRestricted = !isProficient && !canAfford}
+
+							<div class="equipment-card-container relative">
+								<!-- Small Card (Default State) -->
+								<button
+									onclick={() => selectEquipment(equipment)}
+									disabled={isRestricted ||
+										creationMethod === "random"}
+									class="equipment-card-small text-xs px-2 py-1 rounded border-2 transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-blue-300 relative z-10"
+									class:border-blue-500={isSelected}
+									class:text-blue-500={isSelected}
+									class:hover:border-blue-300={!isSelected &&
+										isProficient &&
+										canAfford}
+									class:border-gray-200={!isSelected &&
+										isProficient &&
+										canAfford}
+									class:border-gray-100={!isSelected &&
+										!isProficient &&
+										canAfford}
+									class:text-gray-700={!isSelected &&
+										!isProficient &&
+										canAfford}
+									class:border-gray-300={isRestricted}
+									class:bg-gray-50={isRestricted}
+									class:opacity-50={isRestricted}
+									class:cursor-not-allowed={isRestricted ||
+										creationMethod === "random"}
+									class:hover:border-blue-400={!isSelected &&
+										!isRestricted &&
+										creationMethod !== "random"}
+								>
+									{equipment.name}
+								</button>
+
+								<!-- Expanded Card (Hover State) -->
+								<div
+									class="equipment-card-expanded absolute top-0 left-0 w-64 p-4 border-2 rounded-lg bg-white shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-20"
+									class:border-blue-500={isSelected}
+									class:border-green-300={!isSelected &&
+										isProficient &&
+										canAfford}
+									class:border-yellow-300={!isSelected &&
+										!isProficient &&
+										canAfford}
+									class:border-red-200={isRestricted}
+								>
+									<!-- Equipment Header -->
+									<div
+										class="flex items-center justify-between mb-2"
 									>
-									<span
-										>Weight: <span class="font-medium"
-											>{equipment.weight}</span
-										></span
+										<div
+											class="flex items-center space-x-2"
+										>
+											<span
+												class="text-xl"
+												role="img"
+												aria-label="{equipment.name} emoji"
+											>
+												{equipment.emoji}
+											</span>
+											<h3
+												class="font-semibold text-lg leading-tight"
+											>
+												{equipment.name}
+											</h3>
+										</div>
+
+										<div class="flex-shrink-0">
+											{#if isSelected}
+												<svg
+													class="w-5 h-5 text-blue-500"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{:else}
+												<div class="w-5 h-5"></div>
+											{/if}
+										</div>
+									</div>
+
+									<!-- Equipment Description -->
+									<div class="flex-grow">
+										<p
+											class="text-sm text-gray-600 mb-3 leading-relaxed"
+										>
+											{equipment.description}
+										</p>
+
+										<!-- Equipment Stats -->
+										<div class="mb-3">
+											<div
+												class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
+											>
+												{#if equipment.damage}
+													Damage
+												{:else if equipment.armorClass}
+													Armor Class
+												{:else}
+													Type
+												{/if}
+											</div>
+											<div
+												class="text-sm font-medium text-green-600"
+											>
+												{equipment.damage ||
+													equipment.armorClass ||
+													equipment.type}
+											</div>
+										</div>
+
+										<!-- Properties -->
+										<div class="mb-3">
+											<div
+												class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
+											>
+												Properties
+											</div>
+											<div class="flex flex-wrap gap-1">
+												{#each equipment.properties?.slice(0, 3) || [] as property}
+													<span
+														class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+													>
+														{property}
+													</span>
+												{/each}
+												{#if equipment.properties && equipment.properties.length > 3}
+													<span
+														class="text-xs text-gray-500 px-2 py-1"
+													>
+														+{equipment.properties
+															.length - 3} more
+													</span>
+												{/if}
+											</div>
+										</div>
+									</div>
+
+									<!-- Cost, Weight, and Availability -->
+									<div
+										class="text-xs text-gray-500 pt-2 border-t border-gray-100"
 									>
+										<div
+											class="flex items-center justify-between mb-1"
+										>
+											<span
+												>Cost: <span class="font-medium"
+													>{equipment.cost}</span
+												></span
+											>
+											<span
+												>Weight: <span
+													class="font-medium"
+													>{equipment.weight}</span
+												></span
+											>
+										</div>
+
+										<!-- Availability Status -->
+										<div class="text-center">
+											{#if isProficient && canAfford}
+												<span
+													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700"
+												>
+													✓ Available
+												</span>
+											{:else if !isProficient && canAfford}
+												<span
+													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700"
+												>
+													💰 Purchase Only
+												</span>
+											{:else if isProficient && !canAfford}
+												<span
+													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700"
+												>
+													🎓 Proficient
+												</span>
+											{:else}
+												<span
+													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-700"
+												>
+													❌ Restricted
+												</span>
+											{/if}
+										</div>
+									</div>
 								</div>
 							</div>
-						</button>
-					{/each}
+						{/each}
+					</div>
 				</div>
 
 				<!-- Navigation buttons -->
@@ -2858,6 +3155,43 @@
 				</div>
 			</div>
 		{/if}
+
+		<style>
+			/* ✅ HOVER EXPANSION EFFECT - With 5 second delay 
+			.equipment-card-container .equipment-card-small {
+				transition:
+					opacity 90ms,
+					pointer-events 90ms;
+				transition-delay: 0s;
+			}
+
+			.equipment-card-container .equipment-card-expanded {
+				transition:
+					opacity 90ms,
+					pointer-events 90ms,
+					transform 90ms;
+				transition-delay: 0s;
+			}
+
+			.equipment-card-container:hover .equipment-card-small {
+				opacity: 0;
+				pointer-events: none;
+				transition-delay: 1.5s;
+			}
+
+			.equipment-card-container:hover .equipment-card-expanded {
+				opacity: 1;
+				pointer-events: auto;
+				transform: translate3d(0, -2px, 0) scale(1.02);
+				transition-delay: 1.5s;
+			}
+
+			.equipment-card-expanded {
+				transform: translate3d(0, 0, 0) scale(0.95);
+				opacity: 0;
+				pointer-events: none; */
+			}
+		</style>
 
 		<!-- ✅ STEP 9: CHARACTER DETAILS -->
 		{#if currentStep === 9}
