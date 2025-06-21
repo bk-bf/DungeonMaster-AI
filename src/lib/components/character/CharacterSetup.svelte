@@ -148,7 +148,7 @@
 		console.log("Selected equipment:", selectedEquipment);
 	}
 	// ✅ CATEGORY FILTERING
-	function getFilteredEquipment(): Equipment[] {
+	$: filteredEquipment = (() => {
 		switch (selectedCategory) {
 			case "weapons":
 				return [
@@ -168,7 +168,7 @@
 			default:
 				return ALL_EQUIPMENT;
 		}
-	}
+	})();
 	// ✅ PROFICIENCY CHECKING
 	function isEquipmentProficient(equipment: Equipment): boolean {
 		if (!selectedClass) return false;
@@ -2809,11 +2809,9 @@
 
 					<!-- Gold Display Top Right -->
 					{#if selectedClass}
-						<div
-							class="text-right bg-yellow-50 border border-yellow-200 rounded-lg p-3"
-						>
+						<div class="text-right rounded-lg p-3">
 							<div class="text-sm text-yellow-700 mb-1">
-								Starting Gold
+								🪙 Starting Gold
 							</div>
 							<div class="text-xl font-bold text-yellow-600">
 								{startingGold ||
@@ -2931,7 +2929,7 @@
 
 					<!-- ✅ COMPACT EQUIPMENT CARDS - Same size as skill badges with hover expansion -->
 					<div class="flex flex-wrap gap-1">
-						{#each getFilteredEquipment() as equipment}
+						{#each filteredEquipment as equipment}
 							{@const isSelected = selectedEquipment?.includes(
 								equipment.name,
 							)}
@@ -3155,10 +3153,9 @@
 				</div>
 			</div>
 		{/if}
-
+		<!-- Hover blocks selection, needs fixing-->
 		<style>
-			/* ✅ HOVER EXPANSION EFFECT - With 5 second delay 
-			.equipment-card-container .equipment-card-small {
+			/*	.equipment-card-container .equipment-card-small {
 				transition:
 					opacity 90ms,
 					pointer-events 90ms;
@@ -3168,9 +3165,9 @@
 			.equipment-card-container .equipment-card-expanded {
 				transition:
 					opacity 90ms,
-					pointer-events 90ms,
 					transform 90ms;
 				transition-delay: 0s;
+				/* ✅ REMOVE pointer-events from transition 
 			}
 
 			.equipment-card-container:hover .equipment-card-small {
@@ -3179,18 +3176,18 @@
 				transition-delay: 1.5s;
 			}
 
-			.equipment-card-container:hover .equipment-card-expanded {
-				opacity: 1;
-				pointer-events: auto;
-				transform: translate3d(0, -2px, 0) scale(1.02);
-				transition-delay: 1.5s;
-			}
-
 			.equipment-card-expanded {
 				transform: translate3d(0, 0, 0) scale(0.95);
 				opacity: 0;
-				pointer-events: none; */
+				z-index: -1; /* ✅ Use z-index instead of pointer-events 
 			}
+
+			.equipment-card-container:hover .equipment-card-expanded {
+				opacity: 1;
+				transform: translate3d(0, -2px, 0) scale(1.02);
+				transition-delay: 1.5s;
+				z-index: 20; /* ✅ Bring to front on hover 
+			} */
 		</style>
 
 		<!-- ✅ STEP 9: CHARACTER DETAILS -->
