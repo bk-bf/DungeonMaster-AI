@@ -633,6 +633,42 @@ export const STARTING_GOLD: StartingGoldByClass = {
 };
 
 // ✅ HELPER FUNCTIONS
+export function getChoiceById(choiceId: string, equipmentList: string[]): EquipmentChoice | undefined {
+	const choices = parseClassEquipment(equipmentList);
+	return choices.find(choice => choice.id === choiceId);
+}
+
+// ✅ ENHANCED EQUIPMENT VALIDATION HELPER
+export function canSelectEquipment(
+	equipment: Equipment,
+	choiceId: string,
+	equipmentList: string[]
+): boolean {
+	// Can only select if this is part of a valid class choice
+	const choice = getChoiceById(choiceId, equipmentList);
+	return choice?.options.some(option => option.name === equipment.name) || false;
+}
+
+export function getAvailableChoices(equipmentList: string[]): EquipmentChoice[] {
+	return parseClassEquipment(equipmentList).filter(choice => choice.options.length > 1);
+}
+
+// ✅ HELPER TO GET AUTOMATIC EQUIPMENT
+export function getAutomaticEquipment(equipmentList: string[]): Equipment[] {
+	return parseClassEquipment(equipmentList)
+		.filter(choice => choice.options.length === 1)
+		.map(choice => choice.options[0]);
+}
+
+// ✅ VALIDATE ALL EQUIPMENT CHOICES ARE MADE
+export function areAllChoicesMade(
+	equipmentChoices: Record<string, Equipment | null>,
+	equipmentList: string[]
+): boolean {
+	const requiredChoices = getAvailableChoices(equipmentList);
+	return requiredChoices.every(choice => equipmentChoices[choice.id] !== null);
+}
+
 export function rollStartingGold(className: string): number {
 	const goldData = STARTING_GOLD[className];
 	if (!goldData) return 50; // Default fallback
@@ -684,18 +720,60 @@ export function getEquipmentByType(type: Equipment['type']): Equipment[] {
 	return allEquipment.filter(item => item.type === type);
 }
 
+// ✅ ENHANCED EQUIPMENT PARSER - Handle complex choices
 export function parseClassEquipment(equipmentList: string[]): EquipmentChoice[] {
 	return equipmentList.map((item, index) => {
 		if (item.includes(" or ")) {
-			// This is a choice
-			const options = item.split(" or ").map(option => ({
-				name: option.trim(),
-				emoji: "⚔️", // Default emoji
-				type: 'gear' as const,
-				cost: '—',
-				weight: '—',
-				description: option.trim()
-			}));
+			// Split the choice into options
+			const optionStrings = item.split(" or ").map(opt => opt.trim());
+			const options: Equipment[] = [];
+
+			optionStrings.forEach(optionString => {
+				if (optionString.includes("martial weapon and shield")) {
+					// ✅ CREATE COMPOUND OPTION: Weapon + Shield
+					options.push({
+						name: "Martial Weapon + Shield",
+						emoji: "⚔️🛡️",
+						type: "gear",
+						cost: "—",
+						weight: "—",
+						description: "Choose any martial weapon plus a shield",
+						properties: ["Compound Choice"]
+					});
+				} else if (optionString.includes("two martial weapons")) {
+					// ✅ CREATE COMPOUND OPTION: Two Weapons
+					options.push({
+						name: "Two Martial Weapons",
+						emoji: "⚔️⚔️",
+						type: "gear",
+						cost: "—",
+						weight: "—",
+						description: "Choose any two martial weapons",
+						properties: ["Compound Choice"]
+					});
+				} else if (optionString.includes("any martial melee weapon")) {
+					// ✅ PLACEHOLDER FOR MARTIAL MELEE EXPANSION
+					options.push({
+						name: "Any Martial Melee Weapon",
+						emoji: "⚔️",
+						type: "weapon",
+						cost: "—",
+						weight: "—",
+						description: "Choose from martial melee weapons",
+						properties: ["Expandable Choice"]
+					});
+				} else {
+					// ✅ SPECIFIC EQUIPMENT
+					options.push({
+						name: optionString,
+						emoji: "⚔️",
+						type: "gear",
+						cost: "—",
+						weight: "—",
+						description: optionString
+					});
+				}
+			});
 
 			return {
 				id: `choice_${index}`,
@@ -704,22 +782,23 @@ export function parseClassEquipment(equipmentList: string[]): EquipmentChoice[] 
 				allowCustom: item.includes("any ")
 			};
 		} else {
-			// This is automatic equipment
+			// Automatic equipment
 			return {
 				id: `auto_${index}`,
 				description: item,
 				options: [{
 					name: item,
-					emoji: "🎒", // Default emoji for gear
-					type: 'gear' as const,
-					cost: '—',
-					weight: '—',
+					emoji: "🎒",
+					type: "gear",
+					cost: "—",
+					weight: "—",
 					description: item
 				}]
 			};
 		}
 	});
 }
+
 
 // ✅ WEAPON CATEGORY HELPERS
 export function getWeaponsByCategory(category: string): Equipment[] {

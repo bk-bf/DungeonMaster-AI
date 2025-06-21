@@ -4,6 +4,13 @@
 	import { contextFileManager } from "$lib/services/contextFiles";
 	import { campaignStore } from "$lib/stores/campaigns";
 	import { createEventDispatcher } from "svelte";
+	import WelcomeScreen from "$lib/components/character/creation/WelcomeScreen.svelte";
+	import CreationMethod from "$lib/components/character/creation/CreationMethod.svelte";
+	import RaceSelection from "$lib/components/character/creation/RaceSelection.svelte";
+	import ClassSelection from "$lib/components/character/creation/ClassSelection.svelte";
+	import AbilityScores from "$lib/components/character/creation/AbilityScores.svelte";
+	import BackgroundSelection from "$lib/components/character/creation/BackgroundSelection.svelte";
+	import SkillResolution from "$lib/components/character/creation/SkillResolution.svelte";
 	import {
 		RACES,
 		type Race,
@@ -48,7 +55,6 @@
 		type Equipment,
 		type EquipmentChoice,
 		rollStartingGold,
-		parseClassEquipment,
 		getEquipmentByCategory,
 		MARTIAL_MELEE_WEAPONS,
 		SIMPLE_WEAPONS,
@@ -57,7 +63,12 @@
 		TOOLS_AND_KITS,
 		ADVENTURING_GEAR,
 		EQUIPMENT_PACKS,
-		ALL_EQUIPMENT, // ✅ ADD THIS
+		ALL_EQUIPMENT,
+		parseClassEquipment,
+		getChoiceById,
+		canSelectEquipment,
+		areAllChoicesMade,
+		getAutomaticEquipment,
 	} from "$lib/data/equipment";
 
 	// ✅ EXISTING STATE MANAGEMENT EVENT DISPATCHER - handles completion events for parent component
@@ -101,7 +112,6 @@
 	let finalSkillProficiencies: SkillProficiency[] = []; // ✅ NEW: Final resolved skills
 	let skillReplacements: Record<string, string> = {}; // ✅ NEW: Overlap replacements
 	let equipmentMethod: "class" | "gold" | null = null; // ✅ NEW: Equipment method selection
-	let equipmentChoices: Record<string, string> = {}; // ✅ NEW: Player equipment choices
 	let finalEquipment: Equipment[] = []; // ✅ NEW: Final equipment list
 	let canReroll: boolean = true; // ✅ NEW: Controls if reroll is allowed for gold
 	let equipmentLocked = false; // Prevent going back after gold choice
@@ -109,7 +119,142 @@
 	let selectedEquipment: string[] = [];
 	let selectedCategory: string = "all";
 	let startingGold: number = 0;
+	let automaticEquipment: Equipment[] = [];
+	let equipmentChoices: Record<string, Equipment | null> = {};
 
+	// ✅ EVENT HANDLERS FOR WELCOME SCREEN
+	function handleCreateCharacter() {
+		currentStep = 2;
+	}
+
+	function handleImportCharacter() {
+		showImport = true;
+	}
+	// ✅ EVENT HANDLERS FOR CREATION METHOD
+	function handleMethodSelected(event: CustomEvent) {
+		creationMethod = event.detail.method;
+		currentStep = 3;
+		console.log("Selected creation method:", creationMethod);
+	}
+	// ✅ EVENT HANDLERS FOR RACE SELECTION
+	function handleRaceSelected(event: CustomEvent) {
+		selectedRace = event.detail.race;
+		selectedSubrace = null; // Reset subrace when race changes
+		console.log("Selected race:", selectedRace?.name);
+	}
+
+	function handleSubraceSelected(event: CustomEvent) {
+		selectedSubrace = event.detail.subrace;
+		console.log("Selected subrace:", selectedSubrace);
+	}
+
+	function handleRaceNext() {
+		currentStep = 4;
+	}
+
+	function handleRaceBack() {
+		currentStep = 2;
+	}
+	function handleCreationMethodBack() {
+		currentStep = 1;
+	}
+	// ✅ EVENT HANDLERS FOR CLASS SELECTION
+	function handleClassSelected(event: CustomEvent) {
+		selectedClass = event.detail.class;
+		selectedSkills = []; // Reset skills when changing class
+		console.log("Selected class:", selectedClass?.name);
+	}
+
+	function handleSkillToggled(event: CustomEvent) {
+		const skill = event.detail.skill;
+		if (selectedSkills.includes(skill)) {
+			selectedSkills = selectedSkills.filter((s) => s !== skill);
+		} else if (
+			selectedClass &&
+			selectedSkills.length < selectedClass.skillChoices
+		) {
+			selectedSkills = [...selectedSkills, skill];
+		}
+		console.log("Selected skills:", selectedSkills);
+	}
+
+	function handleSkillsReset() {
+		selectedSkills = [];
+	}
+
+	function handleClassNext() {
+		currentStep = 5;
+	}
+
+	function handleClassBack() {
+		currentStep = 3;
+	}
+	// ✅ EVENT HANDLERS FOR ABILITY SCORES
+	function handleAbilityMethodSelected(event: CustomEvent) {
+		selectedAbilityMethod = event.detail.method;
+		console.log("Selected ability method:", selectedAbilityMethod?.name);
+	}
+
+	function handleAbilityScoreChanged(event: CustomEvent) {
+		const { ability, score } = event.detail;
+		abilityScores[ability] = score;
+		console.log(`${ability} changed to ${score}`);
+	}
+
+	function handleAbilityScoresRerolled(event: CustomEvent) {
+		rolledScores = event.detail.scores;
+		console.log("Rerolled ability scores:", rolledScores);
+	}
+
+	function handleAbilityNext() {
+		currentStep = 6;
+	}
+
+	function handleAbilityBack() {
+		currentStep = 4;
+	}
+
+	function handleAbilityResetMethod() {
+		selectedAbilityMethod = null;
+	}
+
+	// ✅ EVENT HANDLERS FOR BACKGROUND SELECTION
+	function handleBackgroundSelected(event: CustomEvent) {
+		selectedBackground = event.detail.background;
+		console.log("Selected background:", selectedBackground?.name);
+	}
+
+	function handleBackgroundNext() {
+		currentStep = 7;
+	}
+
+	function handleBackgroundBack() {
+		currentStep = 5;
+	}
+
+	// ✅ EVENT HANDLERS FOR SKILL RESOLUTION
+	function handleSkillsInitialized(event: CustomEvent) {
+		finalSkillProficiencies = event.detail.finalSkillProficiencies;
+		skillReplacements = event.detail.skillReplacements;
+		skillsFinalized = true;
+		console.log("Skills initialized:", finalSkillProficiencies);
+	}
+
+	function handleReplacementSelected(event: CustomEvent) {
+		const { overlappingSkill, replacementSkill } = event.detail;
+		skillReplacements[overlappingSkill] = replacementSkill;
+		console.log(
+			`Replacement selected: ${overlappingSkill} → ${replacementSkill}`,
+		);
+	}
+
+	function handleSkillResolutionNext() {
+		currentStep = 8;
+	}
+
+	function handleSkillResolutionBack() {
+		currentStep = 6;
+	}
 	// ✅ BACKGROUND SKILL DATA - skills granted by backgrounds
 	const BACKGROUND_SKILLS: Record<string, string[]> = {
 		"Folk Hero": ["Animal Handling", "Survival"],
@@ -293,17 +438,13 @@
 	$: isBackgroundSelected = selectedBackground !== null; // NEW: Background validation
 	$: canProceedFromBackground = isBackgroundSelected;
 	$: skillsFinalized = finalSkillProficiencies.length > 0; // ✅ NEW: Skills validation
-	$: allReplacementsChosen =
-		skillOverlaps.length === 0 ||
-		skillOverlaps.every(
-			(skill) =>
-				skillReplacements[skill] &&
-				skillReplacements[skill].trim() !== "",
-		);
-	// ✅ FIX: Also update the reactive validation
-	$: canProceedFromSkills = skillsFinalized && allReplacementsChosen;
 	$: equipmentMethodSelected = equipmentMethod !== null; // ✅ NEW: Equipment validation
-	$: canProceedFromEquipment = selectedEquipment.length > 0;
+	$: canProceedFromEquipment = selectedClass
+		? areAllChoicesMade(equipmentChoices, selectedClass.startingEquipment)
+		: false;
+	$: if (selectedClass) {
+		initializeEquipmentChoices();
+	}
 	// ✅REACTIVE STATEMENTS WITH PROPER NULL CHECKS
 	$: skillOverlaps =
 		selectedClass && selectedBackground && selectedSkills
@@ -330,45 +471,67 @@
 			console.log(`Rolled ${startingGold} gp for ${selectedClass.name}`);
 		} else if (method === "class") {
 			// Initialize class equipment choices
-			initializeClassEquipment();
+			initializeEquipment();
 		}
 
 		console.log("Selected equipment method:", method);
 	}
 
-	function initializeClassEquipment() {
+	function initializeEquipment() {
 		if (!selectedClass || !selectedBackground) return;
 
-		// Parse class equipment into choices
-		const classEquipmentChoices = parseClassEquipment(
+		// Add all background equipment automatically
+		automaticEquipment = selectedBackground.equipment.map((item) => ({
+			name: item,
+			emoji: "🎒",
+			type: "gear",
+			cost: "—",
+			weight: "—",
+			description: `From ${selectedBackground?.name ?? ""} background`,
+		}));
+
+		// Initialize class equipment choices
+		const classChoices = parseClassEquipment(
 			selectedClass.startingEquipment,
 		);
-
-		// Initialize equipment choices
-		equipmentChoices = {};
-		classEquipmentChoices.forEach((choice) => {
-			if (choice.options.length > 1) {
-				equipmentChoices[choice.id] = ""; // Needs player choice
+		classChoices.forEach((choice) => {
+			if (choice.options.length === 1) {
+				// Automatic equipment
+				automaticEquipment.push(choice.options[0]);
 			} else {
-				equipmentChoices[choice.id] = choice.options[0].name; // Automatic
+				// Player choice required
+				equipmentChoices[choice.id] = null;
 			}
 		});
-
-		finalEquipment =
-			selectedBackground?.equipment.map((item) => ({
-				name: item,
-				type: "gear" as const,
-				cost: "—",
-				weight: "—",
-				description: `From ${selectedBackground?.name ?? "Unknown"} background`,
-				emoji: "🎒", // Add a default or appropriate emoji for gear
-			})) ?? [];
-		console.log("Initialized class equipment:", equipmentChoices);
 	}
+	function initializeEquipmentChoices() {
+		if (!selectedClass) return;
 
-	function selectEquipmentChoice(choiceId: string, equipment: string) {
+		const choices = parseClassEquipment(selectedClass.startingEquipment);
+		equipmentChoices = {};
+
+		choices.forEach((choice) => {
+			if (choice.options.length > 1) {
+				equipmentChoices[choice.id] = null; // Requires player choice
+			}
+			// Single options are automatic, no choice needed
+		});
+	}
+	function selectEquipmentChoice(choiceId: string, equipment: Equipment) {
+		if (
+			!selectedClass ||
+			!canSelectEquipment(
+				equipment,
+				choiceId,
+				selectedClass.startingEquipment,
+			)
+		) {
+			console.error("Invalid equipment choice");
+			return;
+		}
+
 		equipmentChoices[choiceId] = equipment;
-		console.log("Selected equipment:", choiceId, "→", equipment);
+		console.log("Equipment choice:", choiceId, "→", equipment.name);
 	}
 
 	function rerollStartingGold() {
@@ -817,271 +980,101 @@
 	<div
 		class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
 	>
-		<!-- ✅ STEP 1: WELCOME SCREEN - initial landing page with main options -->
+		<!-- ✅ STEP 1: WELCOME SCREEN - Now extracted to component -->
 		{#if currentStep === 1}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					🧙‍♂️ Welcome to DungeonMaster AI
-				</h2>
-
-				<div class="space-y-4">
-					<p class="text-gray-600">
-						Choose how you'd like to begin your adventure:
-					</p>
-
-					<!-- Create New Character Button - leads to character creation method selection -->
-					<button
-						onclick={() => (currentStep = 2)}
-						class="w-full p-4 border-2 border-red-200 bg-red-50 rounded-lg hover:border-red-300 hover:bg-red-100 focus:ring-2 focus:ring-red-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
-					>
-						<div class="flex items-center space-x-3">
-							<div
-								class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center"
-							>
-								<svg
-									class="w-6 h-6 text-red-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h3 class="font-semibold text-red-800">
-									Create New Character
-								</h3>
-								<p class="text-sm text-red-700">
-									Create your character with guidance
-								</p>
-							</div>
-						</div>
-					</button>
-
-					<!-- Import Previous Session Button - opens file import modal -->
-					<button
-						onclick={handleImportClick}
-						class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 transition-all text-left transform hover:scale-[1.02]"
-					>
-						<div class="flex items-center space-x-3">
-							<div
-								class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"
-							>
-								<svg
-									class="w-6 h-6 text-gray-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h3 class="font-semibold">
-									Import Previous Session
-								</h3>
-								<p class="text-sm text-gray-600">
-									Continue your adventure from an exported
-									file
-								</p>
-							</div>
-						</div>
-					</button>
-				</div>
-			</div>
+			<WelcomeScreen
+				on:createCharacter={handleCreateCharacter}
+				on:importCharacter={handleImportCharacter}
+			/>
 		{/if}
 
-		<!-- ✅ STEP 2: CHARACTER CREATION METHOD - NEW! Choose how to create character -->
+		<!-- ✅ STEP 2: CREATION METHOD - Now extracted to component -->
 		{#if currentStep === 2}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					🎲 Choose Creation Method
-				</h2>
-
-				<div class="space-y-4">
-					<p class="text-gray-600">
-						How would you like to create your character?
-					</p>
-
-					<!-- Standard Creation - Full control, step-by-step process -->
-					<button
-						onclick={() => {
-							creationMethod = "standard";
-							currentStep = 3;
-						}}
-						class="w-full p-4 border-2 rounded-lg transition-all text-left transform hover:scale-[1.02] focus:ring-2 focus:ring-opacity-50"
-						class:border-blue-300={creationMethod === "standard"}
-						class:bg-blue-50={creationMethod === "standard"}
-						class:border-gray-200={creationMethod !== "standard"}
-						class:hover:border-blue-300={creationMethod !==
-							"standard"}
-						class:hover:bg-blue-50={creationMethod !== "standard"}
-						class:focus:ring-blue-300={true}
-					>
-						<div class="flex items-center space-x-3">
-							<div
-								class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center"
-							>
-								<svg
-									class="w-6 h-6 text-blue-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h3 class="font-semibold text-blue-800">
-									Standard Creation
-								</h3>
-								<p class="text-sm text-blue-700">
-									Full control over every aspect of your
-									character
-								</p>
-								<p class="text-xs text-blue-600 mt-1">
-									Recommended for experienced players
-								</p>
-							</div>
-						</div>
-					</button>
-
-					<!-- Quick Build - Optimized character with minimal choices -->
-					<button
-						onclick={() => {
-							creationMethod = "quick";
-							currentStep = 3;
-						}}
-						class="w-full p-4 border-2 rounded-lg transition-all text-left transform hover:scale-[1.02] focus:ring-2 focus:ring-opacity-50"
-						class:border-green-300={creationMethod === "quick"}
-						class:bg-green-50={creationMethod === "quick"}
-						class:border-gray-200={creationMethod !== "quick"}
-						class:hover:border-green-300={creationMethod !==
-							"quick"}
-						class:hover:bg-green-50={creationMethod !== "quick"}
-						class:focus:ring-green-300={true}
-					>
-						<div class="flex items-center space-x-3">
-							<div
-								class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"
-							>
-								<svg
-									class="w-6 h-6 text-green-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M13 10V3L4 14h7v7l9-11h-7z"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h3 class="font-semibold text-green-800">
-									Quick Build
-								</h3>
-								<p class="text-sm text-green-700">
-									Optimized character ready to play in minutes
-								</p>
-								<p class="text-xs text-green-600 mt-1">
-									Perfect for beginners and fast games
-								</p>
-							</div>
-						</div>
-					</button>
-
-					<!-- Random Character - Dice-based generation for surprises -->
-					<button
-						onclick={() => {
-							creationMethod = "random";
-							currentStep = 3;
-						}}
-						class="w-full p-4 border-2 rounded-lg transition-all text-left transform hover:scale-[1.02] focus:ring-2 focus:ring-opacity-50"
-						class:border-purple-300={creationMethod === "random"}
-						class:bg-purple-50={creationMethod === "random"}
-						class:border-gray-200={creationMethod !== "random"}
-						class:hover:border-purple-300={creationMethod !==
-							"random"}
-						class:hover:bg-purple-50={creationMethod !== "random"}
-						class:focus:ring-purple-300={true}
-					>
-						<div class="flex items-center space-x-3">
-							<div
-								class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center"
-							>
-								<svg
-									class="w-6 h-6 text-purple-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2m-5 4v6m-3-3h6"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h3 class="font-semibold text-purple-800">
-									Random Character
-								</h3>
-								<p class="text-sm text-purple-700">
-									Let the dice decide your character's fate
-								</p>
-								<p class="text-xs text-purple-600 mt-1">
-									For adventurous players who love surprises
-								</p>
-							</div>
-						</div>
-					</button>
-				</div>
-
-				<!-- Navigation buttons for Step 2 -->
-				<div class="flex justify-between mt-8">
-					<button
-						onclick={() => (currentStep = 1)}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
-					>
-						← Back
-					</button>
-
-					<!-- Info about selected method -->
-					{#if creationMethod}
-						<div class="text-sm text-gray-500">
-							Selected: <span class="font-medium capitalize"
-								>{creationMethod} Creation</span
-							>
-						</div>
-					{/if}
-				</div>
-			</div>
+			<CreationMethod
+				bind:creationMethod
+				on:methodSelected={handleMethodSelected}
+				on:back={handleCreationMethodBack}
+			/>
 		{/if}
 
-		<!-- ✅ STEP 3: RACE SELECTION - Enhanced with emojis and perfect alignment -->
+		<!-- ✅ STEP 3: RACE SELECTION - Now extracted to component -->
 		{#if currentStep === 3}
+			<RaceSelection
+				bind:selectedRace
+				bind:selectedSubrace
+				{creationMethod}
+				on:raceSelected={handleRaceSelected}
+				on:subraceSelected={handleSubraceSelected}
+				on:next={handleRaceNext}
+				on:back={handleRaceBack}
+			/>
+		{/if}
+
+		<!-- ✅ STEP 4: CLASS SELECTION - Now extracted to component -->
+		{#if currentStep === 4}
+			<ClassSelection
+				bind:selectedClass
+				bind:selectedSkills
+				{creationMethod}
+				on:classSelected={handleClassSelected}
+				on:skillsReset={handleSkillsReset}
+				on:next={handleClassNext}
+				on:back={handleClassBack}
+			/>
+		{/if}
+
+		<!-- ✅ STEP 5: ABILITY SCORES - Now extracted to component -->
+		{#if currentStep === 5}
+			<AbilityScores
+				bind:selectedAbilityMethod
+				bind:abilityScores
+				bind:pointBuyRemaining
+				bind:rolledScores
+				{selectedRace}
+				{creationMethod}
+				on:methodSelected={handleAbilityMethodSelected}
+				on:scoreChanged={handleAbilityScoreChanged}
+				on:scoresRerolled={handleAbilityScoresRerolled}
+				on:next={handleAbilityNext}
+				on:back={handleAbilityBack}
+				on:resetMethod={handleAbilityResetMethod}
+			/>
+		{/if}
+
+		<!-- ✅ STEP 6: BACKGROUND SELECTION - Now extracted to component -->
+		{#if currentStep === 6}
+			<BackgroundSelection
+				bind:selectedBackground
+				{selectedClass}
+				{selectedSkills}
+				{creationMethod}
+				on:backgroundSelected={handleBackgroundSelected}
+				on:next={handleBackgroundNext}
+				on:back={handleBackgroundBack}
+			/>
+		{/if}
+
+		<!-- ✅ STEP 7: SKILL RESOLUTION - Now extracted to component -->
+		{#if currentStep === 7}
+			<SkillResolution
+				{selectedClass}
+				{selectedBackground}
+				{selectedSkills}
+				bind:finalSkillProficiencies
+				bind:skillReplacements
+				{creationMethod}
+				on:skillsInitialized={handleSkillsInitialized}
+				on:replacementSelected={handleReplacementSelected}
+				on:next={handleSkillResolutionNext}
+				on:back={handleSkillResolutionBack}
+			/>
+		{/if}
+
+		<!-- ✅ STEP 8: EQUIPMENT SELECTION - Clean dropdown interface with proper D&D 5e rules -->
+		{#if currentStep === 8}
 			<div class="p-6">
 				<h2 class="text-2xl font-bold mb-4">
-					🧝‍♀️ Choose Your Race
+					⚔️ Choose Your Equipment
 					{#if creationMethod === "quick"}
 						<span class="text-sm font-normal text-green-600"
 							>(Quick Build)</span
@@ -1098,575 +1091,258 @@
 				</h2>
 
 				<p class="text-gray-600 mb-6">
-					Your race determines your character's physical traits,
-					natural abilities, and cultural background.
-					{#if creationMethod === "random"}
-						<span class="text-purple-600 font-medium"
-							>(Race will be randomly selected)</span
-						>
-					{/if}
+					Make your equipment choices based on your class and
+					background. Each choice follows official D&D 5e rules.
 				</p>
 
-				<!-- Race Grid - displays all available races with consistent alignment -->
-				<div
-					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
-				>
-					{#each RACES as race}
-						<button
-							onclick={() => selectRace(race)}
-							disabled={creationMethod === "random"}
-							class="h-full p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 flex flex-col"
-							class:border-blue-500={selectedRace?.name ===
-								race.name}
-							class:bg-blue-50={selectedRace?.name === race.name}
-							class:border-gray-200={selectedRace?.name !==
-								race.name}
-							class:hover:border-blue-300={selectedRace?.name !==
-								race.name && creationMethod !== "random"}
-							class:bg-gray-100={creationMethod === "random"}
-							class:cursor-not-allowed={creationMethod ===
-								"random"}
-						>
-							<!-- ✅ RACE HEADER - Fixed height container for perfect alignment -->
-							<div
-								class="flex items-center justify-between mb-2 min-h-[2rem]"
-							>
-								<div class="flex items-center space-x-2">
-									<!-- ✅ NEW: Race emoji with consistent sizing -->
-									<span
-										class="text-xl"
-										role="img"
-										aria-label="{race.name} emoji"
-									>
-										{race.emoji}
-									</span>
-									<!-- ✅ Race name with consistent typography -->
-									<h3
-										class="font-semibold text-lg leading-tight"
-									>
-										{race.name}
-									</h3>
-								</div>
-
-								<!-- ✅ Selection checkbox - always in same position -->
-								<div class="flex-shrink-0">
-									{#if selectedRace?.name === race.name}
-										<svg
-											class="w-5 h-5 text-blue-500"
-											fill="currentColor"
-											viewBox="0 0 20 20"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									{:else}
-										<!-- ✅ Placeholder to maintain consistent spacing -->
-										<div class="w-5 h-5"></div>
-									{/if}
-								</div>
-							</div>
-
-							<!-- ✅ RACE DESCRIPTION - Fixed height for consistent layout -->
-							<div class="flex-grow">
-								<p
-									class="text-sm text-gray-600 mb-3 min-h-[2.5rem] leading-relaxed"
-								>
-									{race.description}
-								</p>
-
-								<!-- ✅ ABILITY SCORE INCREASES - Consistent spacing -->
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Ability Score Increase
-									</div>
-									<div
-										class="text-sm font-medium text-green-600"
-									>
-										{formatAbilityScoreIncrease(
-											race.abilityScoreIncrease,
-										)}
-									</div>
-								</div>
-
-								<!-- ✅ KEY TRAITS - Consistent height container -->
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Key Traits
-									</div>
-									<div
-										class="flex flex-wrap gap-1 min-h-[1.5rem]"
-									>
-										{#each race.traits.slice(0, 3) as trait}
-											<span
-												class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
-											>
-												{trait}
-											</span>
-										{/each}
-										{#if race.traits.length > 3}
-											<span
-												class="text-xs text-gray-500 px-2 py-1"
-											>
-												+{race.traits.length - 3} more
-											</span>
-										{/if}
-									</div>
-								</div>
-							</div>
-
-							<!-- ✅ SIZE AND SPEED - Always at bottom for consistent alignment -->
-							<div
-								class="text-xs text-gray-500 mt-auto pt-2 border-t border-gray-100"
-							>
-								<div class="flex items-center justify-between">
-									<span
-										>Size: <span class="font-medium"
-											>{race.size}</span
-										></span
-									>
-									<span
-										>Speed: <span class="font-medium"
-											>{race.speed} ft</span
-										></span
-									>
-								</div>
-								{#if race.subraces}
-									<div class="mt-1 text-center">
-										<span
-											class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700"
-										>
-											<svg
-												class="w-3 h-3 mr-1"
-												fill="currentColor"
-												viewBox="0 0 20 20"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-											Has Subraces
-										</span>
-									</div>
-								{/if}
-							</div>
-						</button>
-					{/each}
-				</div>
-
-				<!-- ✅ SUBRACE SELECTION - Enhanced with better visual hierarchy -->
-				{#if selectedRace?.subraces && creationMethod !== "random"}
-					<div class="border-t pt-6">
-						<div class="flex items-center space-x-2 mb-4">
-							<span
-								class="text-xl"
-								role="img"
-								aria-label="{selectedRace.name} emoji"
-							>
-								{selectedRace.emoji}
-							</span>
-							<h3 class="text-lg font-semibold">
-								Choose Your {selectedRace.name} Subrace
+				{#if selectedClass && selectedBackground}
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<!-- ✅ CLASS EQUIPMENT CHOICES - Proper dropdown selections -->
+						<div class="space-y-4">
+							<h3 class="text-lg font-semibold text-blue-800">
+								From {selectedClass.name} Class
 							</h3>
-						</div>
 
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							{#each selectedRace.subraces as subrace}
-								<button
-									onclick={() => selectSubrace(subrace.name)}
-									class="p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 h-full flex flex-col"
-									class:border-blue-500={selectedSubrace ===
-										subrace.name}
-									class:bg-blue-50={selectedSubrace ===
-										subrace.name}
-									class:border-gray-200={selectedSubrace !==
-										subrace.name}
-									class:hover:border-blue-300={selectedSubrace !==
-										subrace.name}
-								>
-									<!-- ✅ SUBRACE HEADER - Consistent alignment -->
-									<div
-										class="flex items-center justify-between mb-2 min-h-[1.5rem]"
-									>
-										<h4 class="font-semibold leading-tight">
-											{subrace.name}
-										</h4>
-										<div class="flex-shrink-0">
-											{#if selectedSubrace === subrace.name}
+							{#each parseClassEquipment(selectedClass.startingEquipment) as choice, index}
+								<div class="p-4 bg-blue-50 rounded-lg border">
+									{#if choice.options.length > 1}
+										<!-- ✅ CHOICE REQUIRED -->
+										<div class="mb-3">
+											<h4
+												class="font-medium text-blue-800"
+											>
+												<span
+													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 mr-2"
+												>
+													Choose One
+												</span>
+												{choice.description}
+											</h4>
+										</div>
+
+										<!-- ✅ DROPDOWN SELECTION -->
+										<div class="relative">
+											<select
+												bind:value={
+													equipmentChoices[choice.id]
+												}
+												class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-900 focus:border-blue-500 focus:outline-none appearance-none"
+												class:border-blue-500={equipmentChoices[
+													choice.id
+												]}
+											>
+												<option value={null} disabled
+													>Select your equipment...</option
+												>
+
+												<!-- ✅ HANDLE SPECIFIC WEAPON CATEGORIES -->
+												{#if choice.description.includes("any martial melee weapon")}
+													<!-- Include original options first -->
+													{#each choice.options as originalOption}
+														<option
+															value={originalOption}
+														>
+															{originalOption.emoji}
+															{originalOption.name}
+															{#if originalOption.damage}({originalOption.damage}){/if}
+															- Recommended
+														</option>
+													{/each}
+													<option disabled
+														>──── Other Martial
+														Weapons ────</option
+													>
+													{#each MARTIAL_MELEE_WEAPONS.filter((weapon) => !choice.options.some((opt) => opt.name === weapon.name)) as weapon}
+														<option value={weapon}>
+															{weapon.emoji}
+															{weapon.name} ({weapon.damage})
+														</option>
+													{/each}
+												{:else if choice.description.includes("any simple weapon")}
+													{#each choice.options as originalOption}
+														<option
+															value={originalOption}
+														>
+															{originalOption.emoji}
+															{originalOption.name}
+															{#if originalOption.damage}({originalOption.damage}){/if}
+															- Recommended
+														</option>
+													{/each}
+													<option disabled
+														>──── Other Simple
+														Weapons ────</option
+													>
+													{#each SIMPLE_WEAPONS.filter((weapon) => !choice.options.some((opt) => opt.name === weapon.name)) as weapon}
+														<option value={weapon}>
+															{weapon.emoji}
+															{weapon.name} ({weapon.damage})
+														</option>
+													{/each}
+												{:else if choice.description.includes("any martial weapon")}
+													{#each choice.options as originalOption}
+														<option
+															value={originalOption}
+														>
+															{originalOption.emoji}
+															{originalOption.name}
+															{#if originalOption.damage}({originalOption.damage}){/if}
+															- Recommended
+														</option>
+													{/each}
+													<option disabled
+														>──── Other Martial
+														Weapons ────</option
+													>
+													{#each [...MARTIAL_MELEE_WEAPONS, ...RANGED_WEAPONS].filter((weapon) => !choice.options.some((opt) => opt.name === weapon.name)) as weapon}
+														<option value={weapon}>
+															{weapon.emoji}
+															{weapon.name} ({weapon.damage})
+														</option>
+													{/each}
+												{:else}
+													<!-- Regular specific options -->
+													{#each choice.options as option}
+														<option value={option}>
+															{option.emoji}
+															{option.name}
+														</option>
+													{/each}
+												{/if}
+											</select>
+
+											<!-- Custom dropdown arrow -->
+											<div
+												class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none"
+											>
 												<svg
-													class="w-4 h-4 text-blue-500"
+													class="w-4 h-4 text-gray-400"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M19 9l-7 7-7-7"
+													/>
+												</svg>
+											</div>
+										</div>
+
+										<!-- ✅ SELECTED EQUIPMENT PREVIEW -->
+										{#if equipmentChoices[choice.id]}
+											{@const selectedEquipment =
+												equipmentChoices[choice.id]}
+											<div
+												class="mt-3 p-3 bg-white rounded-lg border border-blue-200"
+											>
+												<div
+													class="flex items-center space-x-3"
+												>
+													<span class="text-2xl"
+														>{selectedEquipment?.emoji}</span
+													>
+													<div>
+														<h5
+															class="font-semibold text-gray-900"
+														>
+															{selectedEquipment?.name}
+														</h5>
+														<p
+															class="text-sm text-gray-600"
+														>
+															{selectedEquipment?.description}
+														</p>
+														{#if selectedEquipment?.damage}
+															<p
+																class="text-sm font-medium text-green-600"
+															>
+																Damage: {selectedEquipment?.damage}
+															</p>
+														{/if}
+														{#if selectedEquipment?.properties && selectedEquipment.properties.length > 0}
+															<div
+																class="flex flex-wrap gap-1 mt-1"
+															>
+																{#each selectedEquipment.properties as property}
+																	<span
+																		class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
+																	>
+																		{property}
+																	</span>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												</div>
+											</div>
+										{/if}
+									{:else}
+										<!-- ✅ AUTOMATIC EQUIPMENT -->
+										<div class="mb-3">
+											<h4
+												class="font-medium text-green-800"
+											>
+												<span
+													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 mr-2"
+												>
+													Included
+												</span>
+												{choice.options[0].name}
+											</h4>
+										</div>
+
+										<div
+											class="p-3 bg-green-50 rounded-lg border border-green-200"
+										>
+											<div
+												class="flex items-center space-x-2"
+											>
+												<svg
+													class="w-5 h-5 text-green-500"
 													fill="currentColor"
 													viewBox="0 0 20 20"
 												>
 													<path
 														fill-rule="evenodd"
-														d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+														d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
 														clip-rule="evenodd"
 													/>
 												</svg>
-											{:else}
-												<div class="w-4 h-4"></div>
-											{/if}
-										</div>
-									</div>
-
-									<!-- ✅ SUBRACE CONTENT - Flexible height -->
-									<div class="flex-grow">
-										<p
-											class="text-sm text-gray-600 mb-3 leading-relaxed"
-										>
-											{subrace.description}
-										</p>
-
-										<div class="mb-2">
-											<div
-												class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-											>
-												Additional Bonuses
-											</div>
-											<div
-												class="text-sm font-medium text-green-600"
-											>
-												{formatAbilityScoreIncrease(
-													subrace.abilityScoreIncrease,
-												)}
-											</div>
-										</div>
-									</div>
-
-									<!-- ✅ SUBRACE TRAITS - Always at bottom -->
-									<div
-										class="mt-auto pt-2 border-t border-gray-100"
-									>
-										<div
-											class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-										>
-											Special Traits
-										</div>
-										<div class="flex flex-wrap gap-1">
-											{#each subrace.traits as trait}
 												<span
-													class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+													class="font-medium text-green-800"
+													>{choice.options[0]
+														.name}</span
 												>
-													{trait}
-												</span>
-											{/each}
+												<span
+													class="text-sm text-green-600"
+													>- No choice needed,
+													automatically yours</span
+												>
+											</div>
 										</div>
-									</div>
-								</button>
+									{/if}
+								</div>
 							{/each}
 						</div>
-					</div>
-				{/if}
 
-				<!-- Navigation buttons for Step 3 -->
-				<div class="flex justify-between mt-8">
-					<button
-						onclick={() => (currentStep = 2)}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
-					>
-						← Back
-					</button>
+						<!-- ✅ BACKGROUND EQUIPMENT - Automatic -->
+						<div class="space-y-4">
+							<h3 class="text-lg font-semibold text-green-800">
+								From {selectedBackground.name} Background
+							</h3>
 
-					<button
-						onclick={() => (currentStep = 4)}
-						disabled={!canProceedFromRace}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-					>
-						Next →
-					</button>
-				</div>
-
-				<!-- ✅ RACE SUMMARY - Enhanced with emoji -->
-				{#if selectedRace}
-					<div class="mt-6 p-4 bg-gray-50 rounded-lg border">
-						<h4 class="font-medium text-gray-800 mb-2">
-							Selected Race:
-						</h4>
-						<div class="text-sm text-gray-600">
-							<div class="flex items-center space-x-2 mb-1">
-								<span
-									class="text-lg"
-									role="img"
-									aria-label="{selectedRace.name} emoji"
-								>
-									{selectedRace.emoji}
-								</span>
-								<span class="font-medium"
-									>{selectedRace.name}</span
-								>
-								{#if selectedSubrace}
-									<span class="text-gray-500"
-										>({selectedSubrace})</span
-									>
-								{/if}
-							</div>
-							<span class="text-green-600">
-								{formatAbilityScoreIncrease(
-									selectedRace.abilityScoreIncrease,
-								)}
-								{#if selectedSubrace && selectedRace.subraces}
-									{@const subrace =
-										selectedRace.subraces.find(
-											(s) => s.name === selectedSubrace,
-										)}
-									{#if subrace}
-										, {formatAbilityScoreIncrease(
-											subrace.abilityScoreIncrease,
-										)}
-									{/if}
-								{/if}
-							</span>
-						</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- ✅ STEP 4: CLASS SELECTION - Enhanced with skill selection -->
-		{#if currentStep === 4}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					⚔️ Choose Your Class
-					{#if creationMethod === "quick"}
-						<span class="text-sm font-normal text-green-600"
-							>(Quick Build)</span
-						>
-					{:else if creationMethod === "random"}
-						<span class="text-sm font-normal text-purple-600"
-							>(Random)</span
-						>
-					{:else}
-						<span class="text-sm font-normal text-blue-600"
-							>(Standard)</span
-						>
-					{/if}
-				</h2>
-
-				<p class="text-gray-600 mb-6">
-					Your class determines your character's abilities, skills,
-					and role in adventures.
-					{#if creationMethod === "random"}
-						<span class="text-purple-600 font-medium"
-							>(Class will be randomly selected)</span
-						>
-					{/if}
-				</p>
-
-				<!-- ✅ CLASS GRID - existing class selection cards remain the same -->
-				<div
-					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
-				>
-					{#each CLASSES as classItem}
-						<button
-							onclick={() => selectClass(classItem)}
-							disabled={creationMethod === "random"}
-							class="h-full p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 flex flex-col"
-							class:border-blue-500={selectedClass?.name ===
-								classItem.name}
-							class:bg-blue-50={selectedClass?.name ===
-								classItem.name}
-							class:border-gray-200={selectedClass?.name !==
-								classItem.name}
-							class:hover:border-blue-300={selectedClass?.name !==
-								classItem.name && creationMethod !== "random"}
-							class:bg-gray-100={creationMethod === "random"}
-							class:cursor-not-allowed={creationMethod ===
-								"random"}
-						>
-							<!-- ✅ CLASS HEADER - same as before -->
-							<div
-								class="flex items-center justify-between mb-2 min-h-[2rem]"
-							>
-								<div class="flex items-center space-x-2">
-									<span
-										class="text-xl"
-										role="img"
-										aria-label="{classItem.name} emoji"
-									>
-										{classItem.emoji}
-									</span>
-									<h3
-										class="font-semibold text-lg leading-tight"
-									>
-										{classItem.name}
-									</h3>
-								</div>
-
-								<div class="flex-shrink-0">
-									{#if selectedClass?.name === classItem.name}
-										<svg
-											class="w-5 h-5 text-blue-500"
-											fill="currentColor"
-											viewBox="0 0 20 20"
+							<div class="p-4 bg-green-50 rounded-lg border">
+								<h4 class="font-medium text-green-800 mb-3">
+									Automatic Equipment
+								</h4>
+								<div class="space-y-2">
+									{#each selectedBackground.equipment as equipment}
+										<div
+											class="flex items-center space-x-2"
 										>
-											<path
-												fill-rule="evenodd"
-												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									{:else}
-										<div class="w-5 h-5"></div>
-									{/if}
-								</div>
-							</div>
-
-							<!-- ✅ CLASS CONTENT - same as before -->
-							<div class="flex-grow">
-								<p
-									class="text-sm text-gray-600 mb-3 min-h-[2.5rem] leading-relaxed"
-								>
-									{classItem.description}
-								</p>
-
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Hit Die & Primary Ability
-									</div>
-									<div
-										class="text-sm font-medium text-green-600"
-									>
-										{classItem.hitDie} • {classItem.primaryAbility.join(
-											", ",
-										)}
-									</div>
-								</div>
-
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Skill Choices
-									</div>
-									<div class="text-sm text-gray-700">
-										Choose {classItem.skillChoices} skills
-									</div>
-								</div>
-
-								<div class="mb-3">
-									<div class="flex flex-wrap gap-1">
-										<span
-											class="text-xs px-2 py-1 rounded-full"
-											class:bg-red-100={getClassType(
-												classItem,
-											) === "Martial"}
-											class:text-red-700={getClassType(
-												classItem,
-											) === "Martial"}
-											class:bg-purple-100={getClassType(
-												classItem,
-											) === "Spellcaster"}
-											class:text-purple-700={getClassType(
-												classItem,
-											) === "Spellcaster"}
-											class:bg-blue-100={getClassType(
-												classItem,
-											) === "Specialist"}
-											class:text-blue-700={getClassType(
-												classItem,
-											) === "Specialist"}
-										>
-											{getClassType(classItem)}
-										</span>
-										{#if classItem.spellcaster}
-											<span
-												class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full"
-											>
-												✨ Spellcaster
-											</span>
-										{/if}
-									</div>
-								</div>
-							</div>
-
-							<div
-								class="text-xs text-gray-500 mt-auto pt-2 border-t border-gray-100"
-							>
-								<div class="flex items-center justify-between">
-									<span
-										>Saves: <span class="font-medium"
-											>{classItem.savingThrows.join(
-												", ",
-											)}</span
-										></span
-									>
-								</div>
-								<div class="mt-1 text-center">
-									<span
-										class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700"
-									>
-										<svg
-											class="w-3 h-3 mr-1"
-											fill="currentColor"
-											viewBox="0 0 20 20"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-										{classItem.skillChoices} Skill{classItem.skillChoices !==
-										1
-											? "s"
-											: ""}
-									</span>
-								</div>
-							</div>
-						</button>
-					{/each}
-				</div>
-
-				<!-- ✅ ENHANCED CLASS DETAILS - Compact skill selection -->
-				{#if selectedClass && creationMethod !== "random"}
-					<div class="border-t pt-6">
-						<div class="flex items-center justify-between mb-4">
-							<div class="flex items-center space-x-2">
-								<span
-									class="text-xl"
-									role="img"
-									aria-label="{selectedClass.name} emoji"
-								>
-									{selectedClass.emoji}
-								</span>
-								<h3 class="text-lg font-semibold">
-									{selectedClass.name} Details
-								</h3>
-							</div>
-						</div>
-
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<!-- ✅ COMPACT SKILL SELECTION - Small cards like proficiency badges -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<div
-									class="flex items-center justify-between mb-3"
-								>
-									<h4 class="font-medium text-gray-800">
-										Choose {selectedClass.skillChoices} Skills
-									</h4>
-									<!-- ✅ Skill counter in top right -->
-									<div class="flex items-center space-x-1">
-										<span
-											class="text-sm"
-											class:text-red-600={selectedSkills.length ===
-												0}
-											class:text-gray-600={selectedSkills.length >
-												0}
-										>
-											{selectedSkills.length}/{selectedClass.skillChoices}
-										</span>
-										{#if hasCorrectSkillCount}
 											<svg
 												class="w-4 h-4 text-green-500"
 												fill="currentColor"
@@ -1674,1466 +1350,79 @@
 											>
 												<path
 													fill-rule="evenodd"
-													d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
 													clip-rule="evenodd"
 												/>
 											</svg>
-										{/if}
-									</div>
-								</div>
-
-								<!-- ✅ COMPACT SKILL CARDS - Same size as proficiency badges -->
-								<div class="flex flex-wrap gap-1">
-									{#each selectedClass.availableSkills as skill}
-										{@const isSelected =
-											selectedSkills.includes(skill)}
-										{@const isDisabled =
-											!isSelected &&
-											selectedSkills.length >=
-												selectedClass.skillChoices}
-
-										<button
-											onclick={() =>
-												handleSkillToggle(skill)}
-											disabled={isDisabled}
-											class="text-xs px-2 py-1 rounded border-2 transition-all focus:outline-none focus:ring-1 focus:ring-blue-300"
-											class:border-blue-500={isSelected}
-											class:text-blue-500={isSelected}
-											class:border-gray-200={!isSelected &&
-												!isDisabled}
-											class:bg-white={!isSelected &&
-												!isDisabled}
-											class:text-gray-700={!isSelected &&
-												!isDisabled}
-											class:hover:border-blue-300={!isSelected &&
-												!isDisabled}
-											class:border-gray-100={isDisabled}
-											class:bg-gray-50={isDisabled}
-											class:text-gray-400={isDisabled}
-											class:cursor-not-allowed={isDisabled}
-											class:opacity-50={isDisabled}
-										>
-											{skill}
-										</button>
-									{/each}
-								</div>
-							</div>
-
-							<!-- ✅ STARTING EQUIPMENT -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Starting Equipment
-								</h4>
-								<ul
-									class="text-sm text-gray-600 space-y-1 max-h-48 overflow-y-auto"
-								>
-									{#each selectedClass.startingEquipment as equipment}
-										<li class="flex items-start">
-											<span
-												class="text-green-500 mr-2 mt-0.5"
-												>•</span
+											<span class="text-sm text-green-700"
+												>{equipment}</span
 											>
-											<span>{equipment}</span>
-										</li>
-									{/each}
-								</ul>
-							</div>
-
-							<!-- ✅ ARMOR PROFICIENCY -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Armor Proficiency
-								</h4>
-								<div class="flex flex-wrap gap-1">
-									{#each selectedClass.armorProficiency as armor}
-										<span
-											class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-										>
-											{armor}
-										</span>
-									{/each}
-								</div>
-							</div>
-
-							<!-- ✅ WEAPON PROFICIENCY -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Weapon Proficiency
-								</h4>
-								<div class="flex flex-wrap gap-1">
-									{#each selectedClass.weaponProficiency as weapon}
-										<span
-											class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded"
-										>
-											{weapon}
-										</span>
-									{/each}
-								</div>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- Navigation buttons for Step 4 -->
-				<div class="flex justify-between mt-8">
-					<button
-						onclick={() => (currentStep = 3)}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
-					>
-						← Back
-					</button>
-
-					<button
-						onclick={() => (currentStep = 5)}
-						disabled={!canProceedFromClass}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-					>
-						Next →
-					</button>
-				</div>
-
-				<!-- ✅ ENHANCED CLASS SUMMARY - includes skills -->
-				{#if selectedClass}
-					<div class="mt-6 p-4 bg-gray-50 rounded-lg border">
-						<h4 class="font-medium text-gray-800 mb-2">
-							Selected Class:
-						</h4>
-						<div class="text-sm text-gray-600">
-							<div class="flex items-center space-x-2 mb-1">
-								<span
-									class="text-lg"
-									role="img"
-									aria-label="{selectedClass.name} emoji"
-								>
-									{selectedClass.emoji}
-								</span>
-								<span class="font-medium"
-									>{selectedClass.name}</span
-								>
-								<span class="text-gray-500"
-									>({getClassType(selectedClass)})</span
-								>
-							</div>
-							<div class="text-green-600 mb-1">
-								Hit Die: {selectedClass.hitDie} • Primary: {selectedClass.primaryAbility.join(
-									", ",
-								)}
-								{#if selectedClass.spellcaster}
-									• Spellcaster
-								{/if}
-							</div>
-							{#if selectedSkills.length > 0}
-								<div class="text-blue-600">
-									Skills: {selectedSkills.join(", ")}
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- ✅ STEP 5: ABILITY SCORES - NEW! Choose ability score generation method and assign scores -->
-		{#if currentStep === 5}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					💪 Ability Scores
-					{#if creationMethod === "quick"}
-						<span class="text-sm font-normal text-green-600"
-							>(Quick Build)</span
-						>
-					{:else if creationMethod === "random"}
-						<span class="text-sm font-normal text-purple-600"
-							>(Random)</span
-						>
-					{:else}
-						<span class="text-sm font-normal text-blue-600"
-							>(Standard)</span
-						>
-					{/if}
-				</h2>
-
-				<p class="text-gray-600 mb-6">
-					Your ability scores determine your character's basic
-					capabilities and modifiers.
-					{#if creationMethod === "random"}
-						<span class="text-purple-600 font-medium"
-							>(Ability scores will be randomly generated)</span
-						>
-					{/if}
-				</p>
-
-				<!-- ✅ ABILITY SCORE METHOD SELECTION -->
-				{#if !selectedAbilityMethod || creationMethod === "random"}
-					<div class="mb-6">
-						<h3 class="text-lg font-semibold mb-4">
-							Choose Generation Method
-						</h3>
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							{#each ABILITY_SCORE_METHODS as method}
-								<button
-									onclick={() => selectAbilityMethod(method)}
-									disabled={creationMethod === "random"}
-									class="p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300"
-									class:border-blue-500={selectedAbilityMethod?.name ===
-										method.name}
-									class:bg-blue-50={selectedAbilityMethod?.name ===
-										method.name}
-									class:border-gray-200={selectedAbilityMethod?.name !==
-										method.name}
-									class:hover:border-blue-300={selectedAbilityMethod?.name !==
-										method.name &&
-										creationMethod !== "random"}
-									class:bg-gray-100={creationMethod ===
-										"random"}
-									class:cursor-not-allowed={creationMethod ===
-										"random"}
-								>
-									<div
-										class="flex items-center justify-between mb-2"
-									>
-										<div
-											class="flex items-center space-x-2"
-										>
-											<span
-												class="text-xl"
-												role="img"
-												aria-label="{method.name} emoji"
-											>
-												{method.emoji}
-											</span>
-											<h4 class="font-semibold">
-												{method.name}
-											</h4>
-										</div>
-										{#if selectedAbilityMethod?.name === method.name}
-											<svg
-												class="w-5 h-5 text-blue-500"
-												fill="currentColor"
-												viewBox="0 0 20 20"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										{:else}
-											<div class="w-5 h-5"></div>
-										{/if}
-									</div>
-									<p class="text-sm text-gray-600">
-										{method.description}
-									</p>
-									{#if method.type === "array"}
-										<div
-											class="mt-2 text-xs text-green-600"
-										>
-											Values: 15, 14, 13, 12, 10, 8
-										</div>
-									{:else if method.type === "pointBuy"}
-										<div
-											class="mt-2 text-xs text-green-600"
-										>
-											27 points • Range: 8-15
-										</div>
-									{/if}
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- ✅ ABILITY SCORE ASSIGNMENT -->
-				{#if selectedAbilityMethod}
-					<div class="border-t pt-6">
-						<div class="flex items-center justify-between mb-4">
-							<h3 class="text-lg font-semibold">
-								Assign Ability Scores
-							</h3>
-							<div class="flex items-center space-x-4">
-								{#if selectedAbilityMethod.type === "pointBuy"}
-									<div class="text-sm">
-										<span class="font-medium"
-											>Points Remaining:</span
-										>
-										<span
-											class="text-lg font-bold"
-											class:text-red-600={pointBuyRemaining <
-												0}
-											class:text-green-600={pointBuyRemaining ===
-												0}
-											class:text-blue-600={pointBuyRemaining >
-												0}
-										>
-											{pointBuyRemaining}
-										</span>
-									</div>
-								{:else if selectedAbilityMethod.type === "roll"}
-									<button
-										onclick={rerollAbilityScores}
-										class="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors text-sm"
-										title="Reroll all ability scores"
-									>
-										<span class="text-base">🎲</span>
-										<span>Reroll</span>
-									</button>
-								{/if}
-							</div>
-						</div>
-
-						<div
-							class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-						>
-							{#each ABILITY_SCORES as ability}
-								{@const baseScore =
-									abilityScores[ability.name] || 10}
-								{@const racialBonus = selectedRace
-									? getRacialBonus(
-											selectedRace.name,
-											ability.name,
-										)
-									: 0}
-								{@const totalScore = baseScore + racialBonus}
-								{@const modifier =
-									getAbilityModifier(totalScore)}
-
-								<div class="p-4 bg-gray-50 rounded-lg border">
-									<!-- Ability Header -->
-									<div
-										class="flex items-center space-x-2 mb-2"
-									>
-										<span
-											class="text-lg"
-											role="img"
-											aria-label="{ability.name} emoji"
-										>
-											{ability.emoji}
-										</span>
-										<div>
-											<h4 class="font-semibold text-sm">
-												{ability.name}
-											</h4>
-											<p class="text-xs text-gray-500">
-												{ability.shortName}
-											</p>
-										</div>
-									</div>
-
-									<!-- Score Display -->
-									<div class="text-center mb-3">
-										<div
-											class="text-2xl font-bold text-gray-800"
-										>
-											{totalScore}
-										</div>
-										<div class="text-sm text-gray-600">
-											{formatModifier(modifier)} modifier
-										</div>
-										{#if racialBonus > 0}
-											<div class="text-xs text-green-600">
-												{baseScore} + {racialBonus} racial
-											</div>
-										{/if}
-									</div>
-
-									<!-- Point Buy Controls -->
-									{#if selectedAbilityMethod.type === "pointBuy"}
-										<div
-											class="flex items-center justify-center space-x-2"
-										>
-											<button
-												onclick={() =>
-													adjustPointBuyScore(
-														ability.name,
-														-1,
-													)}
-												disabled={baseScore <= 8}
-												class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
-											>
-												−
-											</button>
-											<span
-												class="w-8 text-center font-medium"
-												>{baseScore}</span
-											>
-											<button
-												onclick={() =>
-													adjustPointBuyScore(
-														ability.name,
-														1,
-													)}
-												disabled={baseScore >= 15 ||
-													pointBuyRemaining <
-														getPointBuyCost(
-															baseScore + 1,
-														) -
-															getPointBuyCost(
-																baseScore,
-															)}
-												class="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
-											>
-												+
-											</button>
-										</div>
-									{/if}
-
-									<!-- Ability Description -->
-									<div class="mt-3 text-xs text-gray-600">
-										<p class="mb-1">
-											{ability.description}
-										</p>
-										<div class="text-xs text-gray-500">
-											Used for: {ability.examples
-												.slice(0, 2)
-												.join(", ")}
-										</div>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- Navigation buttons for Step 5 -->
-				<div class="flex justify-between mt-8">
-					<button
-						onclick={() => {
-							if (selectedAbilityMethod) {
-								// If method is selected, go back to method selection (within same step)
-								selectedAbilityMethod = null;
-							} else {
-								// If no method selected, go back to previous step
-								currentStep = 4;
-							}
-						}}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-					>
-						← Back
-					</button>
-
-					<button
-						onclick={() => (currentStep = 6)}
-						disabled={!canProceedFromAbilities}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-					>
-						Next →
-					</button>
-				</div>
-			</div>
-		{/if}
-		<!-- STEP 6: BACKGROUND SELECTION - NEW! Choose character background -->
-		{#if currentStep === 6}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					📚 Choose Your Background
-					{#if creationMethod === "quick"}
-						<span class="text-sm font-normal text-green-600"
-							>(Quick Build)</span
-						>
-					{:else if creationMethod === "random"}
-						<span class="text-sm font-normal text-purple-600"
-							>(Random)</span
-						>
-					{:else}
-						<span class="text-sm font-normal text-blue-600"
-							>(Standard)</span
-						>
-					{/if}
-				</h2>
-
-				<p class="text-gray-600 mb-6">
-					Your background represents your character's history before
-					becoming an adventurer, providing skills, tools, and
-					equipment.
-					{#if creationMethod === "random"}
-						<span class="text-purple-600 font-medium"
-							>(Background will be randomly selected)</span
-						>
-					{/if}
-				</p>
-
-				<!-- Background Grid - displays all available backgrounds -->
-				<div
-					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
-				>
-					{#each BACKGROUNDS as background}
-						<button
-							onclick={() => selectBackground(background)}
-							disabled={creationMethod === "random"}
-							class="h-full p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 flex flex-col"
-							class:border-blue-500={selectedBackground?.name ===
-								background.name}
-							class:bg-blue-50={selectedBackground?.name ===
-								background.name}
-							class:border-gray-200={selectedBackground?.name !==
-								background.name}
-							class:hover:border-blue-300={selectedBackground?.name !==
-								background.name && creationMethod !== "random"}
-							class:bg-gray-100={creationMethod === "random"}
-							class:cursor-not-allowed={creationMethod ===
-								"random"}
-						>
-							<!-- Background Header -->
-							<div
-								class="flex items-center justify-between mb-2 min-h-[2rem]"
-							>
-								<div class="flex items-center space-x-2">
-									<span
-										class="text-xl"
-										role="img"
-										aria-label="{background.name} emoji"
-									>
-										{background.emoji}
-									</span>
-									<h3
-										class="font-semibold text-lg leading-tight"
-									>
-										{background.name}
-									</h3>
-								</div>
-
-								<div class="flex-shrink-0">
-									{#if selectedBackground?.name === background.name}
-										<svg
-											class="w-5 h-5 text-blue-500"
-											fill="currentColor"
-											viewBox="0 0 20 20"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									{:else}
-										<div class="w-5 h-5"></div>
-									{/if}
-								</div>
-							</div>
-
-							<!-- Background Description -->
-							<div class="flex-grow">
-								<p
-									class="text-sm text-gray-600 mb-3 min-h-[2.5rem] leading-relaxed"
-								>
-									{background.description}
-								</p>
-
-								<!-- Skill Proficiencies -->
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Skill Proficiencies
-									</div>
-									<div class="flex flex-wrap gap-1">
-										{#each background.skillProficiencies as skill}
-											<span
-												class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
-											>
-												{skill}
-											</span>
-										{/each}
-									</div>
-								</div>
-
-								<!-- Languages and Tools -->
-								<div class="mb-3">
-									<div
-										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-									>
-										Languages & Tools
-									</div>
-									<div class="text-sm text-gray-700">
-										{#if background.languages > 0}
-											<div class="text-xs text-blue-600">
-												{background.languages} language{background.languages !==
-												1
-													? "s"
-													: ""}
-											</div>
-										{/if}
-										{#if background.tools.length > 0}
-											<div
-												class="text-xs text-purple-600"
-											>
-												{formatSkillList(
-													background.tools,
-												)}
-											</div>
-										{/if}
-									</div>
-								</div>
-							</div>
-
-							<!-- Feature and Equipment -->
-							<div
-								class="text-xs text-gray-500 mt-auto pt-2 border-t border-gray-100"
-							>
-								<div class="mb-1">
-									<span class="font-medium">Feature:</span>
-									{background.feature}
-								</div>
-								<div class="text-xs text-gray-400">
-									Starting equipment included
-								</div>
-							</div>
-						</button>
-					{/each}
-				</div>
-
-				<!-- ✅ ENHANCED BACKGROUND DETAILS - Now with skill overlap detection -->
-				{#if selectedBackground && creationMethod !== "random"}
-					<div class="border-t pt-6">
-						<div class="flex items-center space-x-2 mb-4">
-							<span
-								class="text-xl"
-								role="img"
-								aria-label="{selectedBackground.name} emoji"
-							>
-								{selectedBackground.emoji}
-							</span>
-							<h3 class="text-lg font-semibold">
-								{selectedBackground.name} Details
-							</h3>
-						</div>
-
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<!-- ✅ SKILL PROFICIENCIES - Clean styling with minimal overlap indication -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Skill Proficiencies
-								</h4>
-								<div class="flex flex-wrap gap-1">
-									{#each selectedBackground.skillProficiencies as skill}
-										{@const isOverlap =
-											skillOverlaps.includes(skill)}
-										<span
-											class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
-										>
-											{skill}
-											{#if isOverlap}
-												<span
-													class="ml-1"
-													title="Overlaps with class skill"
-													>⚠️</span
-												>
-											{/if}
-										</span>
-									{/each}
-								</div>
-								{#if hasSkillOverlaps}
-									<p class="text-xs text-gray-600 mt-2">
-										⚠️ Skills overlap with your class
-										selection, but dont worry this will be
-										resolved in the next step.
-									</p>
-								{/if}
-							</div>
-
-							<!-- Starting Equipment -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Starting Equipment
-								</h4>
-								<ul class="text-sm text-gray-600 space-y-1">
-									{#each selectedBackground.equipment as equipment}
-										<li class="flex items-start">
-											<span
-												class="text-green-500 mr-2 mt-0.5"
-												>•</span
-											>
-											<span>{equipment}</span>
-										</li>
-									{/each}
-								</ul>
-							</div>
-
-							<!-- Background Feature -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Feature: {selectedBackground.feature}
-								</h4>
-								<p class="text-sm text-gray-600">
-									This background grants you a special feature
-									that provides unique advantages during your
-									adventures.
-								</p>
-							</div>
-
-							<!-- Personality Traits -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Personality Traits
-								</h4>
-								<div class="space-y-1">
-									{#each selectedBackground.personalityTraits as trait}
-										<div
-											class="text-sm text-gray-600 italic"
-										>
-											"{trait}"
 										</div>
 									{/each}
 								</div>
 							</div>
 
-							<!-- Ideals -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Ideals
-								</h4>
-								<div class="space-y-1">
-									{#each selectedBackground.ideals as ideal}
-										<div
-											class="text-sm text-gray-600 italic"
-										>
-											"{ideal}"
-										</div>
-									{/each}
-								</div>
-							</div>
-
-							<!-- Bonds -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Bonds
-								</h4>
-								<div class="space-y-1">
-									{#each selectedBackground.bonds as bond}
-										<div
-											class="text-sm text-gray-600 italic"
-										>
-											"{bond}"
-										</div>
-									{/each}
-								</div>
-							</div>
-
-							<!-- Flaws -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									Flaws
-								</h4>
-								<div class="space-y-1">
-									{#each selectedBackground.flaws as flaw}
-										<div
-											class="text-sm text-gray-600 italic"
-										>
-											"{flaw}"
-										</div>
-									{/each}
-								</div>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- Navigation buttons for Step 6 -->
-				<div class="flex justify-between mt-8">
-					<button
-						onclick={() => (currentStep = 5)}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
-					>
-						← Back
-					</button>
-
-					<button
-						onclick={() => (currentStep = 7)}
-						disabled={!canProceedFromBackground}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-					>
-						Next →
-					</button>
-				</div>
-
-				<!-- Background Summary -->
-				{#if selectedBackground}
-					<div class="mt-6 p-4 bg-gray-50 rounded-lg border">
-						<h4 class="font-medium text-gray-800 mb-2">
-							Selected Background:
-						</h4>
-						<div class="text-sm text-gray-600">
-							<div class="flex items-center space-x-2 mb-1">
-								<span
-									class="text-lg"
-									role="img"
-									aria-label="{selectedBackground.name} emoji"
-								>
-									{selectedBackground.emoji}
-								</span>
-								<span class="font-medium"
-									>{selectedBackground.name}</span
-								>
-							</div>
-							<div class="text-green-600 mb-1">
-								Skills: {formatSkillList(
-									selectedBackground.skillProficiencies,
-								)}
-							</div>
-							{#if selectedBackground.languages > 0}
-								<div class="text-blue-600 mb-1">
-									Languages: {selectedBackground.languages}
-								</div>
-							{/if}
-							{#if selectedBackground.tools.length > 0}
-								<div class="text-purple-600">
-									Tools: {formatSkillList(
-										selectedBackground.tools,
-									)}
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
-		<!-- ✅ STEP 7: SKILL RESOLUTION - Resolve conflicts and show ALL final skills -->
-		{#if currentStep === 7}
-			<div class="p-6">
-				<h2 class="text-2xl font-bold mb-4">
-					🎯 Skill Resolution
-					{#if creationMethod === "quick"}
-						<span class="text-sm font-normal text-green-600"
-							>(Quick Build)</span
-						>
-					{:else if creationMethod === "random"}
-						<span class="text-sm font-normal text-purple-600"
-							>(Random)</span
-						>
-					{:else}
-						<span class="text-sm font-normal text-blue-600"
-							>(Standard)</span
-						>
-					{/if}
-				</h2>
-
-				<p class="text-gray-600 mb-6">
-					Let's finalize your character's skills by resolving any
-					overlaps between your class and background choices.
-					{#if creationMethod === "random"}
-						<span class="text-purple-600 font-medium"
-							>(Skills will be automatically resolved)</span
-						>
-					{/if}
-				</p>
-
-				<!-- ✅ INITIALIZE SKILL RESOLUTION -->
-				{#if !skillsFinalized && selectedClass && selectedBackground}
-					<div class="mb-6">
-						<div class="text-center">
-							<button
-								onclick={initializeSkillResolution}
-								class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-							>
-								Analyze Skills & Resolve Conflicts
-							</button>
-						</div>
-					</div>
-				{/if}
-
-				<!-- ✅ SKILL CONFLICT RESOLUTION -->
-				{#if skillsFinalized && hasSkillOverlaps && !areAllReplacementsSelected()}
-					<div class="mb-6">
-						<div
-							class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"
-						>
-							<h3 class="font-semibold text-blue-800 mb-2">
-								🔄 Skill Overlap Resolution
-							</h3>
-							<p class="text-sm text-blue-700">
-								Your class and background both grant some of the
-								same skills. Choose replacement skills for the
-								overlapping background skills.
-							</p>
-						</div>
-
-						<div class="space-y-4">
-							{#each skillOverlaps as overlappingSkill}
-								<div class="p-4 bg-gray-50 rounded-lg border">
-									<div
-										class="flex items-center justify-between mb-3"
-									>
-										<div>
-											<h4
-												class="font-medium text-gray-800"
-											>
-												Replace: <span
-													class="text-red-600"
-													>{overlappingSkill}</span
-												>
-											</h4>
-											<p class="text-sm text-gray-600">
-												Both your {selectedClass?.name} class
-												and {selectedBackground?.name} background
-												grant this skill.
-											</p>
-										</div>
-										<div class="text-sm text-gray-500">
-											{skillReplacements[overlappingSkill]
-												? "✅ Resolved"
-												: "⏳ Choose replacement"}
-										</div>
-									</div>
-
-									<div
-										class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
-									>
-										{#each getAvailableReplacementSkills() as skill}
-											{@const isSelected =
-												skillReplacements[
-													overlappingSkill
-												] === skill}
-											<button
-												onclick={() =>
-													selectReplacementSkill(
-														overlappingSkill,
-														skill,
-													)}
-												class="p-2 text-sm border-2 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-300"
-												class:border-blue-500={isSelected}
-												class:bg-blue-50={isSelected}
-												class:text-blue-700={isSelected}
-												class:border-gray-200={!isSelected}
-												class:hover:border-blue-300={!isSelected}
-											>
-												{formatSkillWithAbility(skill)}
-											</button>
-										{/each}
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- ✅ COMPLETE SKILLS SUMMARY - Shows ALL final skills -->
-				{#if skillsFinalized}
-					<div class="border-t pt-6">
-						<h3 class="text-lg font-semibold mb-4">
-							Your Character's Complete Skills
-						</h3>
-
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<!-- Skills by Source -->
-							<div class="space-y-4">
-								<!-- Class Skills - Shows ALL class skills -->
-								<div class="p-4 bg-blue-50 rounded-lg">
-									<h4 class="font-medium text-blue-800 mb-2">
-										From {selectedClass?.name} Class ({selectedSkills.length})
-									</h4>
-									<div class="flex flex-wrap gap-1">
-										{#each selectedSkills as skill}
-											<span
-												class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-											>
-												{formatSkillWithAbility(skill)}
-											</span>
-										{/each}
-									</div>
-								</div>
-
-								<!-- Background Skills - Shows final background skills (with replacements) -->
-								<div class="p-4 bg-green-50 rounded-lg">
-									<h4 class="font-medium text-green-800 mb-2">
-										From {selectedBackground?.name} Background
-										({selectedBackground?.skillProficiencies
-											.length})
-									</h4>
-									<div class="flex flex-wrap gap-1">
-										{#each selectedBackground?.skillProficiencies || [] as skill}
-											{@const isOverlap =
-												skillOverlaps.includes(skill)}
-											{@const replacement =
-												skillReplacements[skill]}
-
-											{#if isOverlap && replacement}
-												<!-- Show replacement skill -->
-												<span
-													class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded"
-												>
-													{formatSkillWithAbility(
-														replacement,
-													)}
-													<span
-														class="text-purple-500 ml-1"
-														title="Replaced {skill}"
-														>↔️</span
-													>
-												</span>
-											{:else if !isOverlap}
-												<!-- Show original background skill -->
-												<span
-													class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
-												>
-													{formatSkillWithAbility(
-														skill,
-													)}
-												</span>
-											{:else}
-												<!-- Show pending replacement -->
-												<span
-													class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded border border-yellow-300"
-												>
-													{skill} (needs replacement)
-												</span>
-											{/if}
-										{/each}
-									</div>
-								</div>
-							</div>
-
-							<!-- Complete Skills List by Ability -->
-							<div class="p-4 bg-gray-50 rounded-lg">
-								<h4 class="font-medium text-gray-800 mb-2">
-									All Skills by Ability Score
+							<!-- ✅ EQUIPMENT SUMMARY -->
+							<div class="p-4 bg-gray-50 rounded-lg border">
+								<h4 class="font-medium text-gray-800 mb-3">
+									Equipment Summary
 								</h4>
 								<div class="space-y-2">
-									{#each ["Str", "Dex", "Con", "Int", "Wis", "Cha"] as ability}
-										{@const allFinalSkills = [
-											...selectedSkills,
-											...(
-												selectedBackground?.skillProficiencies ||
-												[]
-											)
-												.map((skill) => {
-													const isOverlap =
-														skillOverlaps.includes(
-															skill,
-														);
-													const replacement =
-														skillReplacements[
-															skill
-														];
-													return isOverlap &&
-														replacement
-														? replacement
-														: isOverlap
-															? null
-															: skill;
-												})
-												.filter(
-													(skill) => skill !== null,
-												),
-										]}
-										{@const skillsForAbility =
-											allFinalSkills.filter((skill) => {
-												const skillData =
-													getSkillByName(skill);
-												return (
-													skillData?.ability ===
-													ability
-												);
-											})}
-
-										{#if skillsForAbility.length > 0}
-											<div class="text-sm">
-												<span
-													class="font-medium text-gray-700"
-													>{ability}:</span
-												>
-												<span class="text-gray-600">
-													{skillsForAbility.join(
-														", ",
-													)}
-												</span>
-											</div>
-										{/if}
-									{/each}
-								</div>
-
-								<!-- Total Skills Count -->
-								<div class="mt-3 pt-2 border-t border-gray-200">
-									<div
-										class="text-sm font-medium text-gray-700"
-									>
-										Total Skills: {selectedSkills.length +
-											(selectedBackground
-												?.skillProficiencies.length ||
-												0)}
+									<div class="flex justify-between text-sm">
+										<span class="text-gray-600"
+											>Class Choices Made:</span
+										>
+										<span class="font-medium">
+											{Object.values(
+												equipmentChoices,
+											).filter(
+												(choice) => choice !== null,
+											).length} /
+											{parseClassEquipment(
+												selectedClass.startingEquipment,
+											).filter(
+												(choice) =>
+													choice.options.length > 1,
+											).length}
+										</span>
+									</div>
+									<div class="flex justify-between text-sm">
+										<span class="text-gray-600"
+											>Background Items:</span
+										>
+										<span class="font-medium"
+											>{selectedBackground.equipment
+												.length}</span
+										>
+									</div>
+									<div class="flex justify-between text-sm">
+										<span class="text-gray-600"
+											>Total Equipment:</span
+										>
+										<span
+											class="font-medium text-green-600"
+										>
+											{Object.values(
+												equipmentChoices,
+											).filter(
+												(choice) => choice !== null,
+											).length +
+												parseClassEquipment(
+													selectedClass.startingEquipment,
+												).filter(
+													(choice) =>
+														choice.options
+															.length === 1,
+												).length +
+												selectedBackground.equipment
+													.length} items
+										</span>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
 				{/if}
-
-				<!-- Navigation buttons for Step 7 -->
-				<div class="flex justify-between mt-8">
-					<button
-						onclick={() => (currentStep = 6)}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
-					>
-						← Back
-					</button>
-
-					<button
-						onclick={() => (currentStep = 8)}
-						disabled={!canProceedFromSkills ||
-							(hasSkillOverlaps && !areAllReplacementsSelected())}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-					>
-						Next →
-					</button>
-				</div>
-			</div>
-		{/if}
-		<!-- ✅ STEP 8: EQUIPMENT SELECTION - Small cards with hover expansion -->
-		{#if currentStep === 8}
-			<div class="p-6">
-				<!-- Header with Gold Display -->
-				<div class="flex justify-between items-start mb-4">
-					<div>
-						<h2 class="text-2xl font-bold">
-							⚔️ Choose Your Equipment
-							{#if creationMethod === "quick"}
-								<span class="text-sm font-normal text-green-600"
-									>(Quick Build)</span
-								>
-							{:else if creationMethod === "random"}
-								<span
-									class="text-sm font-normal text-purple-600"
-									>(Random)</span
-								>
-							{:else}
-								<span class="text-sm font-normal text-blue-600"
-									>(Standard)</span
-								>
-							{/if}
-						</h2>
-						<p class="text-gray-600 mt-2">
-							Your equipment determines your character's
-							capabilities and survival in adventures.
-						</p>
-					</div>
-
-					<!-- Gold Display Top Right -->
-					{#if selectedClass}
-						<div class="text-right rounded-lg p-3">
-							<div class="text-sm text-yellow-700 mb-1">
-								🪙 Starting Gold
-							</div>
-							<div class="text-xl font-bold text-yellow-600">
-								{startingGold ||
-									rollStartingGold(selectedClass.name)} gp
-							</div>
-							<div class="text-xs text-yellow-600">
-								{STARTING_GOLD[selectedClass.name]?.formula ||
-									"2d4 × 10 gp"}
-							</div>
-							<button
-								onclick={() =>
-									(startingGold = rollStartingGold(
-										selectedClass?.name ?? "",
-									))}
-								class="mt-1 px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700"
-							>
-								🎲 Reroll
-							</button>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Equipment Categories -->
-				<div class="mb-6">
-					<div class="flex flex-wrap gap-2 mb-4">
-						<button
-							onclick={() => (selectedCategory = "all")}
-							class="px-3 py-1 rounded-full text-sm transition-all"
-							class:bg-blue-500={selectedCategory === "all"}
-							class:text-white={selectedCategory === "all"}
-							class:bg-gray-200={selectedCategory !== "all"}
-							class:text-gray-700={selectedCategory !== "all"}
-						>
-							All Equipment
-						</button>
-						<button
-							onclick={() => (selectedCategory = "weapons")}
-							class="px-3 py-1 rounded-full text-sm transition-all"
-							class:bg-blue-500={selectedCategory === "weapons"}
-							class:text-white={selectedCategory === "weapons"}
-							class:bg-gray-200={selectedCategory !== "weapons"}
-							class:text-gray-700={selectedCategory !== "weapons"}
-						>
-							⚔️ Weapons
-						</button>
-						<button
-							onclick={() => (selectedCategory = "armor")}
-							class="px-3 py-1 rounded-full text-sm transition-all"
-							class:bg-blue-500={selectedCategory === "armor"}
-							class:text-white={selectedCategory === "armor"}
-							class:bg-gray-200={selectedCategory !== "armor"}
-							class:text-gray-700={selectedCategory !== "armor"}
-						>
-							🛡️ Armor
-						</button>
-						<button
-							onclick={() => (selectedCategory = "tools")}
-							class="px-3 py-1 rounded-full text-sm transition-all"
-							class:bg-blue-500={selectedCategory === "tools"}
-							class:text-white={selectedCategory === "tools"}
-							class:bg-gray-200={selectedCategory !== "tools"}
-							class:text-gray-700={selectedCategory !== "tools"}
-						>
-							🔧 Tools
-						</button>
-						<button
-							onclick={() => (selectedCategory = "gear")}
-							class="px-3 py-1 rounded-full text-sm transition-all"
-							class:bg-blue-500={selectedCategory === "gear"}
-							class:text-white={selectedCategory === "gear"}
-							class:bg-gray-200={selectedCategory !== "gear"}
-							class:text-gray-700={selectedCategory !== "gear"}
-						>
-							🎒 Gear
-						</button>
-						<button
-							onclick={() => (selectedCategory = "packs")}
-							class="px-3 py-1 rounded-full text-sm transition-all"
-							class:bg-blue-500={selectedCategory === "packs"}
-							class:text-white={selectedCategory === "packs"}
-							class:bg-gray-200={selectedCategory !== "packs"}
-							class:text-gray-700={selectedCategory !== "packs"}
-						>
-							📦 Packs
-						</button>
-					</div>
-				</div>
-
-				<!-- ✅ COMPACT EQUIPMENT CARDS - Small cards with hover expansion -->
-				<div class="p-4 bg-gray-50 rounded-lg">
-					<div class="flex items-center justify-between mb-3">
-						<h4 class="font-medium text-gray-800">
-							Available Equipment
-						</h4>
-						<!-- ✅ Equipment counter in top right -->
-						<div class="flex items-center space-x-1">
-							<span class="text-sm text-gray-600">
-								{selectedEquipment.length} selected
-							</span>
-							{#if selectedEquipment.length > 0}
-								<svg
-									class="w-4 h-4 text-green-500"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							{/if}
-						</div>
-					</div>
-
-					<!-- ✅ COMPACT EQUIPMENT CARDS - Same size as skill badges with hover expansion -->
-					<div class="flex flex-wrap gap-1">
-						{#each filteredEquipment as equipment}
-							{@const isSelected = selectedEquipment?.includes(
-								equipment.name,
-							)}
-							{@const canAfford = canAffordEquipment(equipment)}
-							{@const isProficient =
-								isEquipmentProficient(equipment)}
-							{@const isRestricted = !isProficient && !canAfford}
-
-							<div class="equipment-card-container relative">
-								<!-- Small Card (Default State) -->
-								<button
-									onclick={() => selectEquipment(equipment)}
-									disabled={isRestricted ||
-										creationMethod === "random"}
-									class="equipment-card-small text-xs px-2 py-1 rounded border-2 transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-blue-300 relative z-10"
-									class:border-blue-500={isSelected}
-									class:text-blue-500={isSelected}
-									class:hover:border-blue-300={!isSelected &&
-										isProficient &&
-										canAfford}
-									class:border-gray-200={!isSelected &&
-										isProficient &&
-										canAfford}
-									class:border-gray-100={!isSelected &&
-										!isProficient &&
-										canAfford}
-									class:text-gray-700={!isSelected &&
-										!isProficient &&
-										canAfford}
-									class:border-gray-300={isRestricted}
-									class:bg-gray-50={isRestricted}
-									class:opacity-50={isRestricted}
-									class:cursor-not-allowed={isRestricted ||
-										creationMethod === "random"}
-									class:hover:border-blue-400={!isSelected &&
-										!isRestricted &&
-										creationMethod !== "random"}
-								>
-									{equipment.name}
-								</button>
-
-								<!-- Expanded Card (Hover State) -->
-								<div
-									class="equipment-card-expanded absolute top-0 left-0 w-64 p-4 border-2 rounded-lg bg-white shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-20"
-									class:border-blue-500={isSelected}
-									class:border-green-300={!isSelected &&
-										isProficient &&
-										canAfford}
-									class:border-yellow-300={!isSelected &&
-										!isProficient &&
-										canAfford}
-									class:border-red-200={isRestricted}
-								>
-									<!-- Equipment Header -->
-									<div
-										class="flex items-center justify-between mb-2"
-									>
-										<div
-											class="flex items-center space-x-2"
-										>
-											<span
-												class="text-xl"
-												role="img"
-												aria-label="{equipment.name} emoji"
-											>
-												{equipment.emoji}
-											</span>
-											<h3
-												class="font-semibold text-lg leading-tight"
-											>
-												{equipment.name}
-											</h3>
-										</div>
-
-										<div class="flex-shrink-0">
-											{#if isSelected}
-												<svg
-													class="w-5 h-5 text-blue-500"
-													fill="currentColor"
-													viewBox="0 0 20 20"
-												>
-													<path
-														fill-rule="evenodd"
-														d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											{:else}
-												<div class="w-5 h-5"></div>
-											{/if}
-										</div>
-									</div>
-
-									<!-- Equipment Description -->
-									<div class="flex-grow">
-										<p
-											class="text-sm text-gray-600 mb-3 leading-relaxed"
-										>
-											{equipment.description}
-										</p>
-
-										<!-- Equipment Stats -->
-										<div class="mb-3">
-											<div
-												class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-											>
-												{#if equipment.damage}
-													Damage
-												{:else if equipment.armorClass}
-													Armor Class
-												{:else}
-													Type
-												{/if}
-											</div>
-											<div
-												class="text-sm font-medium text-green-600"
-											>
-												{equipment.damage ||
-													equipment.armorClass ||
-													equipment.type}
-											</div>
-										</div>
-
-										<!-- Properties -->
-										<div class="mb-3">
-											<div
-												class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
-											>
-												Properties
-											</div>
-											<div class="flex flex-wrap gap-1">
-												{#each equipment.properties?.slice(0, 3) || [] as property}
-													<span
-														class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
-													>
-														{property}
-													</span>
-												{/each}
-												{#if equipment.properties && equipment.properties.length > 3}
-													<span
-														class="text-xs text-gray-500 px-2 py-1"
-													>
-														+{equipment.properties
-															.length - 3} more
-													</span>
-												{/if}
-											</div>
-										</div>
-									</div>
-
-									<!-- Cost, Weight, and Availability -->
-									<div
-										class="text-xs text-gray-500 pt-2 border-t border-gray-100"
-									>
-										<div
-											class="flex items-center justify-between mb-1"
-										>
-											<span
-												>Cost: <span class="font-medium"
-													>{equipment.cost}</span
-												></span
-											>
-											<span
-												>Weight: <span
-													class="font-medium"
-													>{equipment.weight}</span
-												></span
-											>
-										</div>
-
-										<!-- Availability Status -->
-										<div class="text-center">
-											{#if isProficient && canAfford}
-												<span
-													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700"
-												>
-													✓ Available
-												</span>
-											{:else if !isProficient && canAfford}
-												<span
-													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700"
-												>
-													💰 Purchase Only
-												</span>
-											{:else if isProficient && !canAfford}
-												<span
-													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700"
-												>
-													🎓 Proficient
-												</span>
-											{:else}
-												<span
-													class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-700"
-												>
-													❌ Restricted
-												</span>
-											{/if}
-										</div>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
 
 				<!-- Navigation buttons -->
 				<div class="flex justify-between mt-8">
@@ -3146,49 +1435,14 @@
 
 					<button
 						onclick={() => (currentStep = 9)}
-						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+						disabled={!canProceedFromEquipment}
+						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
 					>
 						Next →
 					</button>
 				</div>
 			</div>
 		{/if}
-		<!-- Hover blocks selection, needs fixing-->
-		<style>
-			/*	.equipment-card-container .equipment-card-small {
-				transition:
-					opacity 90ms,
-					pointer-events 90ms;
-				transition-delay: 0s;
-			}
-
-			.equipment-card-container .equipment-card-expanded {
-				transition:
-					opacity 90ms,
-					transform 90ms;
-				transition-delay: 0s;
-				/* ✅ REMOVE pointer-events from transition 
-			}
-
-			.equipment-card-container:hover .equipment-card-small {
-				opacity: 0;
-				pointer-events: none;
-				transition-delay: 1.5s;
-			}
-
-			.equipment-card-expanded {
-				transform: translate3d(0, 0, 0) scale(0.95);
-				opacity: 0;
-				z-index: -1; /* ✅ Use z-index instead of pointer-events 
-			}
-
-			.equipment-card-container:hover .equipment-card-expanded {
-				opacity: 1;
-				transform: translate3d(0, -2px, 0) scale(1.02);
-				transition-delay: 1.5s;
-				z-index: 20; /* ✅ Bring to front on hover 
-			} */
-		</style>
 
 		<!-- ✅ STEP 9: CHARACTER DETAILS -->
 		{#if currentStep === 9}
