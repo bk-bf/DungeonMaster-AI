@@ -33,6 +33,33 @@
 		getBackgroundByName,
 		formatSkillList,
 	} from "$lib/data/backgrounds";
+	// ✅ NEW IMPORT - skills data
+	import {
+		ALL_SKILLS,
+		type Skill,
+		type SkillProficiency,
+		getSkillByName,
+		formatSkillWithAbility,
+		detectSkillOverlaps,
+	} from "$lib/data/skills";
+	// ✅ NEW IMPORT - equipment data
+	import {
+		STARTING_GOLD,
+		type Equipment,
+		type EquipmentChoice,
+		rollStartingGold,
+		parseClassEquipment,
+		getEquipmentByCategory,
+		MARTIAL_MELEE_WEAPONS,
+		SIMPLE_WEAPONS,
+		RANGED_WEAPONS,
+		ARMOR,
+		TOOLS_AND_KITS,
+		ADVENTURING_GEAR,
+		EQUIPMENT_PACKS,
+		ALL_EQUIPMENT, // ✅ ADD THIS
+	} from "$lib/data/equipment";
+
 	// ✅ EXISTING STATE MANAGEMENT EVENT DISPATCHER - handles completion events for parent component
 	const dispatch = createEventDispatcher<{
 		complete: {
@@ -71,8 +98,17 @@
 	let pointBuyRemaining = 27; // ✅ NEW: Point buy tracking
 	let rolledScores: number[] = []; // ✅ NEW: For rolled methods
 	let selectedBackground: Background | null = null; // NEW: Selected background
-	let skillOverlaps: string[] = [];
-	let hasSkillOverlaps: boolean = false;
+	let finalSkillProficiencies: SkillProficiency[] = []; // ✅ NEW: Final resolved skills
+	let skillReplacements: Record<string, string> = {}; // ✅ NEW: Overlap replacements
+	let equipmentMethod: "class" | "gold" | null = null; // ✅ NEW: Equipment method selection
+	let startingGold: number = 0; // ✅ NEW: Rolled starting gold
+	let equipmentChoices: Record<string, string> = {}; // ✅ NEW: Player equipment choices
+	let finalEquipment: Equipment[] = []; // ✅ NEW: Final equipment list
+	let canReroll: boolean = true; // ✅ NEW: Controls if reroll is allowed for gold
+	let equipmentLocked = false; // Prevent going back after gold choice
+	let selectedWeapons: string[] = [];
+	let selectedEquipment: string[] = [];
+
 	// ✅ BACKGROUND SKILL DATA - skills granted by backgrounds
 	const BACKGROUND_SKILLS: Record<string, string[]> = {
 		"Folk Hero": ["Animal Handling", "Survival"],
@@ -100,6 +136,16 @@
 		Tiefling: [],
 	};
 
+	function selectEquipment(equipment: Equipment) {
+		if (selectedEquipment.includes(equipment.name)) {
+			selectedEquipment = selectedEquipment.filter(
+				(e) => e !== equipment.name,
+			);
+		} else {
+			selectedEquipment = [...selectedEquipment, equipment.name];
+		}
+		console.log("Selected equipment:", selectedEquipment);
+	}
 	// ✅ SKILL CONFLICT DETECTION FUNCTION
 	function checkSkillConflicts(
 		selectedSkills: string[],
@@ -140,6 +186,241 @@
 		isAbilityMethodSelected && validateAbilityScores();
 	$: isBackgroundSelected = selectedBackground !== null; // NEW: Background validation
 	$: canProceedFromBackground = isBackgroundSelected;
+	$: skillsFinalized = finalSkillProficiencies.length > 0; // ✅ NEW: Skills validation
+	$: allReplacementsChosen =
+		skillOverlaps.length === 0 ||
+		skillOverlaps.every(
+			(skill) =>
+				skillReplacements[skill] &&
+				skillReplacements[skill].trim() !== "",
+		);
+	// ✅ FIX: Also update the reactive validation
+	$: canProceedFromSkills = skillsFinalized && allReplacementsChosen;
+	$: equipmentMethodSelected = equipmentMethod !== null; // ✅ NEW: Equipment validation
+	$: canProceedFromEquipment = selectedEquipment.length > 0;
+	// ✅REACTIVE STATEMENTS WITH PROPER NULL CHECKS
+	$: skillOverlaps =
+		selectedClass && selectedBackground && selectedSkills
+			? detectSkillOverlaps(
+					selectedSkills,
+					selectedBackground.skillProficiencies,
+				)
+			: [];
+
+	$: hasSkillOverlaps = skillOverlaps && skillOverlaps.length > 0;
+	// ✅ CLASS SELECTION HANDLER - resets skills when class changes
+	function selectClass(classItem: Class) {
+		selectedClass = classItem;
+		selectedSkills = []; // Reset skills when changing class
+		console.log("Selected class:", classItem.name);
+	}
+	// ✅ EQUIPMENT SELECTION HANDLERS
+	function selectEquipmentMethod(method: "class" | "gold") {
+		equipmentMethod = method;
+
+		if (method === "gold" && selectedClass) {
+			// Roll starting gold immediately
+			startingGold = rollStartingGold(selectedClass.name);
+			console.log(`Rolled ${startingGold} gp for ${selectedClass.name}`);
+		} else if (method === "class") {
+			// Initialize class equipment choices
+			initializeClassEquipment();
+		}
+
+		console.log("Selected equipment method:", method);
+	}
+
+	function initializeClassEquipment() {
+		if (!selectedClass || !selectedBackground) return;
+
+		// Parse class equipment into choices
+		const classEquipmentChoices = parseClassEquipment(
+			selectedClass.startingEquipment,
+		);
+
+		// Initialize equipment choices
+		equipmentChoices = {};
+		classEquipmentChoices.forEach((choice) => {
+			if (choice.options.length > 1) {
+				equipmentChoices[choice.id] = ""; // Needs player choice
+			} else {
+				equipmentChoices[choice.id] = choice.options[0].name; // Automatic
+			}
+		});
+
+		finalEquipment =
+			selectedBackground?.equipment.map((item) => ({
+				name: item,
+				type: "gear" as const,
+				cost: "—",
+				weight: "—",
+				description: `From ${selectedBackground?.name ?? "Unknown"} background`,
+				emoji: "🎒", // Add a default or appropriate emoji for gear
+			})) ?? [];
+		console.log("Initialized class equipment:", equipmentChoices);
+	}
+
+	function selectEquipmentChoice(choiceId: string, equipment: string) {
+		equipmentChoices[choiceId] = equipment;
+		console.log("Selected equipment:", choiceId, "→", equipment);
+	}
+
+	function rerollStartingGold() {
+		if (selectedClass) {
+			startingGold = rollStartingGold(selectedClass.name);
+			console.log(
+				`Rerolled ${startingGold} gp for ${selectedClass.name}`,
+			);
+		}
+	}
+	function resetEquipmentSelection() {
+		equipmentMethod = null;
+		equipmentChoices = {};
+		finalEquipment = [];
+		startingGold = 0;
+	}
+	// // ✅ SKILL OVERLAP DETECTION FUNCTION  obsolete but kept for reference
+	// function getSkillOverlaps(
+	// 	classSkills: string[],
+	// 	backgroundSkills: string[],
+	// ): string[] {
+	// 	return classSkills.filter((skill) => backgroundSkills.includes(skill));
+	// }
+
+	// ✅ SKILL RESOLUTION HANDLERS
+	function initializeSkillResolution() {
+		if (!selectedClass || !selectedBackground || !selectedSkills) return;
+
+		const overlaps = detectSkillOverlaps(
+			selectedSkills,
+			selectedBackground.skillProficiencies,
+		);
+
+		// Initialize final skill proficiencies
+		finalSkillProficiencies = [];
+
+		// Add non-overlapping class skills
+		selectedSkills.forEach((skill) => {
+			if (!overlaps.includes(skill)) {
+				finalSkillProficiencies.push({
+					skill,
+					source: "class",
+				});
+			}
+		});
+
+		// Add all background skills (overlaps will be handled by replacements)
+		selectedBackground.skillProficiencies.forEach((skill) => {
+			finalSkillProficiencies.push({
+				skill,
+				source: "background",
+			});
+		});
+
+		// Initialize replacement tracking
+		skillReplacements = {};
+		overlaps.forEach((skill) => {
+			skillReplacements[skill] = ""; // Empty string means no replacement chosen yet
+		});
+
+		console.log("Initialized skill resolution:", {
+			overlaps,
+			finalSkillProficiencies,
+			skillReplacements,
+		});
+	}
+
+	function selectReplacementSkill(
+		overlappingSkill: string,
+		replacementSkill: string,
+	) {
+		// Validate the replacement skill isn't already used
+		const currentSkills = selectedSkills;
+		const otherReplacements = Object.entries(skillReplacements)
+			.filter(([key, value]) => key !== overlappingSkill && value !== "")
+			.map(([key, value]) => value);
+		const keptBackgroundSkills =
+			selectedBackground?.skillProficiencies.filter(
+				(skill) => !skillOverlaps.includes(skill),
+			) || [];
+
+		const allUsedSkills = [
+			...currentSkills,
+			...otherReplacements,
+			...keptBackgroundSkills,
+		];
+
+		if (allUsedSkills.includes(replacementSkill)) {
+			console.error(
+				"Cannot select already used skill:",
+				replacementSkill,
+			);
+			return;
+		}
+
+		// Update the replacement
+		skillReplacements[overlappingSkill] = replacementSkill;
+
+		// Update final skill proficiencies
+		finalSkillProficiencies = finalSkillProficiencies.map((prof) => {
+			if (
+				prof.skill === overlappingSkill &&
+				prof.source === "background"
+			) {
+				return {
+					skill: replacementSkill,
+					source: "replacement",
+					replacedSkill: overlappingSkill,
+				};
+			}
+			return prof;
+		});
+
+		console.log(
+			"Selected replacement:",
+			overlappingSkill,
+			"→",
+			replacementSkill,
+		);
+		console.log("All replacements selected:", areAllReplacementsSelected());
+	}
+
+	function getAvailableReplacementSkills(): string[] {
+		// Get all currently selected skills (class skills)
+		const currentSkills = selectedSkills;
+
+		// Get all selected replacement skills (excluding empty strings)
+		const selectedReplacements = Object.values(skillReplacements).filter(
+			(skill) => skill !== "",
+		);
+
+		// Get all background skills that are NOT overlapping (these are kept)
+		const keptBackgroundSkills =
+			selectedBackground?.skillProficiencies.filter(
+				(skill) => !skillOverlaps.includes(skill),
+			) || [];
+
+		// Exclude ALL currently used skills
+		const excludedSkills = [
+			...currentSkills, // Class skills
+			...selectedReplacements, // Already chosen replacements
+			...keptBackgroundSkills, // Background skills being kept
+		];
+
+		return ALL_SKILLS.map((skill) => skill.name).filter(
+			(skill) => !excludedSkills.includes(skill),
+		);
+	}
+
+	// ✅ FIX: Enhanced validation function
+	function areAllReplacementsSelected(): boolean {
+		if (skillOverlaps.length === 0) return true; // No overlaps to resolve
+
+		return skillOverlaps.every((overlappingSkill) => {
+			const replacement = skillReplacements[overlappingSkill];
+			return replacement && replacement.trim() !== "";
+		});
+	}
 
 	// ✅ ABILITY SCORE VALIDATION
 	function validateAbilityScores(): boolean {
@@ -283,31 +564,6 @@
 		selectedSkills = [];
 	}
 
-	// ✅ SKILL OVERLAP DETECTION FUNCTION
-	function getSkillOverlaps(
-		classSkills: string[],
-		backgroundSkills: string[],
-	): string[] {
-		return classSkills.filter((skill) => backgroundSkills.includes(skill));
-	}
-
-	// ✅REACTIVE STATEMENTS WITH PROPER NULL CHECKS
-	$: skillOverlaps =
-		selectedClass && selectedBackground && selectedSkills
-			? getSkillOverlaps(
-					selectedSkills,
-					selectedBackground.skillProficiencies,
-				)
-			: [];
-
-	$: hasSkillOverlaps = skillOverlaps && skillOverlaps.length > 0;
-	// ✅ CLASS SELECTION HANDLER - resets skills when class changes
-	function selectClass(classItem: Class) {
-		selectedClass = classItem;
-		selectedSkills = []; // Reset skills when changing class
-		console.log("Selected class:", classItem.name);
-	}
-
 	// ✅ RACE SELECTION HANDLER - manages race and subrace selection
 	function selectRace(race: Race) {
 		selectedRace = race;
@@ -327,7 +583,7 @@
 		showImport = true;
 	}
 
-	// ENHANCED TRADITIONAL SETUP COMPLETION - includes background data
+	// ✅ ENHANCED TRADITIONAL SETUP COMPLETION - includes equipment data
 	async function completeTraditionalSetup(event: CustomEvent) {
 		const preferences = event.detail;
 
@@ -340,7 +596,11 @@
 				selectedBackground: selectedBackground?.name,
 				selectedRace: selectedRace?.name,
 				selectedSubrace,
-				selectedSkills,
+				finalSkillProficiencies,
+				equipmentMethod,
+				equipmentChoices,
+				startingGold,
+				finalEquipment,
 				selectedAbilityMethod: selectedAbilityMethod?.name,
 				abilityScores,
 				preferences,
@@ -373,7 +633,11 @@
 					background: selectedBackground?.name,
 					race: selectedRace?.name,
 					subrace: selectedSubrace,
-					skills: selectedSkills,
+					skills: finalSkillProficiencies,
+					equipmentMethod,
+					equipment: finalEquipment,
+					startingGold:
+						equipmentMethod === "gold" ? startingGold : undefined,
 					abilityMethod: selectedAbilityMethod?.name,
 					abilityScores,
 					creationMethod,
@@ -385,7 +649,6 @@
 			isCompletingSetup = false;
 		}
 	}
-
 	// ✅ IMPORT SUCCESS HANDLER - processes imported character data
 	function handleImportSuccess(event: CustomEvent) {
 		const { data } = event.detail;
@@ -1322,10 +1585,6 @@
 											!isSelected &&
 											selectedSkills.length >=
 												selectedClass.skillChoices}
-										{@const hasConflict =
-											BACKGROUND_SKILLS[
-												characterBackground
-											]?.includes(skill)}
 
 										<button
 											onclick={() =>
@@ -1352,13 +1611,6 @@
 											class:opacity-50={isDisabled}
 										>
 											{skill}
-											{#if hasConflict}
-												<span
-													class="text-yellow-600 ml-1"
-													title="May conflict with background"
-													>⚠️</span
-												>
-											{/if}
 										</button>
 									{/each}
 								</div>
@@ -1944,43 +2196,8 @@
 							</h3>
 						</div>
 
-						<!-- ✅ SKILL OVERLAP WARNING - NEW! Shows conflicts with class skills -->
-						{#if hasSkillOverlaps}
-							<div
-								class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
-							>
-								<div class="flex items-start space-x-2">
-									<span class="text-yellow-600 text-lg"
-										>⚠️</span
-									>
-									<div>
-										<h4
-											class="font-medium text-yellow-800 mb-1"
-										>
-											Skill Overlap Detected
-										</h4>
-										<p class="text-sm text-yellow-700 mb-2">
-											This background grants skills you
-											already selected from your class.
-											You'll be able to choose alternative
-											skills instead.
-										</p>
-										<div class="flex flex-wrap gap-1">
-											{#each skillOverlaps as skill}
-												<span
-													class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded border border-yellow-300"
-												>
-													{skill}
-												</span>
-											{/each}
-										</div>
-									</div>
-								</div>
-							</div>
-						{/if}
-
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<!-- ✅ ENHANCED SKILL PROFICIENCIES - Shows overlap status -->
+							<!-- ✅ SKILL PROFICIENCIES - Clean styling with minimal overlap indication -->
 							<div class="p-4 bg-gray-50 rounded-lg">
 								<h4 class="font-medium text-gray-800 mb-2">
 									Skill Proficiencies
@@ -1990,13 +2207,7 @@
 										{@const isOverlap =
 											skillOverlaps.includes(skill)}
 										<span
-											class="text-xs px-2 py-1 rounded"
-											class:bg-yellow-100={isOverlap}
-											class:text-yellow-700={isOverlap}
-											class:border={isOverlap}
-											class:border-yellow-300={isOverlap}
-											class:bg-green-100={!isOverlap}
-											class:text-green-700={!isOverlap}
+											class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
 										>
 											{skill}
 											{#if isOverlap}
@@ -2011,11 +2222,13 @@
 								</div>
 								{#if hasSkillOverlaps}
 									<p class="text-xs text-gray-600 mt-2">
-										⚠️ Yellow skills overlap with your class
-										selection
+										⚠️ Skills overlap with your class
+										selection, but dont worry this will be
+										resolved in the next step.
 									</p>
 								{/if}
 							</div>
+
 							<!-- Starting Equipment -->
 							<div class="p-4 bg-gray-50 rounded-lg">
 								<h4 class="font-medium text-gray-800 mb-2">
@@ -2172,9 +2385,482 @@
 				{/if}
 			</div>
 		{/if}
-
-		<!-- ✅ STEP 7: CHARACTER DETAILS -->
+		<!-- ✅ STEP 7: SKILL RESOLUTION - Resolve conflicts and show ALL final skills -->
 		{#if currentStep === 7}
+			<div class="p-6">
+				<h2 class="text-2xl font-bold mb-4">
+					🎯 Skill Resolution
+					{#if creationMethod === "quick"}
+						<span class="text-sm font-normal text-green-600"
+							>(Quick Build)</span
+						>
+					{:else if creationMethod === "random"}
+						<span class="text-sm font-normal text-purple-600"
+							>(Random)</span
+						>
+					{:else}
+						<span class="text-sm font-normal text-blue-600"
+							>(Standard)</span
+						>
+					{/if}
+				</h2>
+
+				<p class="text-gray-600 mb-6">
+					Let's finalize your character's skills by resolving any
+					overlaps between your class and background choices.
+					{#if creationMethod === "random"}
+						<span class="text-purple-600 font-medium"
+							>(Skills will be automatically resolved)</span
+						>
+					{/if}
+				</p>
+
+				<!-- ✅ INITIALIZE SKILL RESOLUTION -->
+				{#if !skillsFinalized && selectedClass && selectedBackground}
+					<div class="mb-6">
+						<div class="text-center">
+							<button
+								onclick={initializeSkillResolution}
+								class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+							>
+								Analyze Skills & Resolve Conflicts
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				<!-- ✅ SKILL CONFLICT RESOLUTION -->
+				{#if skillsFinalized && hasSkillOverlaps && !areAllReplacementsSelected()}
+					<div class="mb-6">
+						<div
+							class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"
+						>
+							<h3 class="font-semibold text-blue-800 mb-2">
+								🔄 Skill Overlap Resolution
+							</h3>
+							<p class="text-sm text-blue-700">
+								Your class and background both grant some of the
+								same skills. Choose replacement skills for the
+								overlapping background skills.
+							</p>
+						</div>
+
+						<div class="space-y-4">
+							{#each skillOverlaps as overlappingSkill}
+								<div class="p-4 bg-gray-50 rounded-lg border">
+									<div
+										class="flex items-center justify-between mb-3"
+									>
+										<div>
+											<h4
+												class="font-medium text-gray-800"
+											>
+												Replace: <span
+													class="text-red-600"
+													>{overlappingSkill}</span
+												>
+											</h4>
+											<p class="text-sm text-gray-600">
+												Both your {selectedClass?.name} class
+												and {selectedBackground?.name} background
+												grant this skill.
+											</p>
+										</div>
+										<div class="text-sm text-gray-500">
+											{skillReplacements[overlappingSkill]
+												? "✅ Resolved"
+												: "⏳ Choose replacement"}
+										</div>
+									</div>
+
+									<div
+										class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
+									>
+										{#each getAvailableReplacementSkills() as skill}
+											{@const isSelected =
+												skillReplacements[
+													overlappingSkill
+												] === skill}
+											<button
+												onclick={() =>
+													selectReplacementSkill(
+														overlappingSkill,
+														skill,
+													)}
+												class="p-2 text-sm border-2 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-300"
+												class:border-blue-500={isSelected}
+												class:bg-blue-50={isSelected}
+												class:text-blue-700={isSelected}
+												class:border-gray-200={!isSelected}
+												class:hover:border-blue-300={!isSelected}
+											>
+												{formatSkillWithAbility(skill)}
+											</button>
+										{/each}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				<!-- ✅ COMPLETE SKILLS SUMMARY - Shows ALL final skills -->
+				{#if skillsFinalized}
+					<div class="border-t pt-6">
+						<h3 class="text-lg font-semibold mb-4">
+							Your Character's Complete Skills
+						</h3>
+
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<!-- Skills by Source -->
+							<div class="space-y-4">
+								<!-- Class Skills - Shows ALL class skills -->
+								<div class="p-4 bg-blue-50 rounded-lg">
+									<h4 class="font-medium text-blue-800 mb-2">
+										From {selectedClass?.name} Class ({selectedSkills.length})
+									</h4>
+									<div class="flex flex-wrap gap-1">
+										{#each selectedSkills as skill}
+											<span
+												class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
+											>
+												{formatSkillWithAbility(skill)}
+											</span>
+										{/each}
+									</div>
+								</div>
+
+								<!-- Background Skills - Shows final background skills (with replacements) -->
+								<div class="p-4 bg-green-50 rounded-lg">
+									<h4 class="font-medium text-green-800 mb-2">
+										From {selectedBackground?.name} Background
+										({selectedBackground?.skillProficiencies
+											.length})
+									</h4>
+									<div class="flex flex-wrap gap-1">
+										{#each selectedBackground?.skillProficiencies || [] as skill}
+											{@const isOverlap =
+												skillOverlaps.includes(skill)}
+											{@const replacement =
+												skillReplacements[skill]}
+
+											{#if isOverlap && replacement}
+												<!-- Show replacement skill -->
+												<span
+													class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded"
+												>
+													{formatSkillWithAbility(
+														replacement,
+													)}
+													<span
+														class="text-purple-500 ml-1"
+														title="Replaced {skill}"
+														>↔️</span
+													>
+												</span>
+											{:else if !isOverlap}
+												<!-- Show original background skill -->
+												<span
+													class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
+												>
+													{formatSkillWithAbility(
+														skill,
+													)}
+												</span>
+											{:else}
+												<!-- Show pending replacement -->
+												<span
+													class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded border border-yellow-300"
+												>
+													{skill} (needs replacement)
+												</span>
+											{/if}
+										{/each}
+									</div>
+								</div>
+							</div>
+
+							<!-- Complete Skills List by Ability -->
+							<div class="p-4 bg-gray-50 rounded-lg">
+								<h4 class="font-medium text-gray-800 mb-2">
+									All Skills by Ability Score
+								</h4>
+								<div class="space-y-2">
+									{#each ["Str", "Dex", "Con", "Int", "Wis", "Cha"] as ability}
+										{@const allFinalSkills = [
+											...selectedSkills,
+											...(
+												selectedBackground?.skillProficiencies ||
+												[]
+											)
+												.map((skill) => {
+													const isOverlap =
+														skillOverlaps.includes(
+															skill,
+														);
+													const replacement =
+														skillReplacements[
+															skill
+														];
+													return isOverlap &&
+														replacement
+														? replacement
+														: isOverlap
+															? null
+															: skill;
+												})
+												.filter(
+													(skill) => skill !== null,
+												),
+										]}
+										{@const skillsForAbility =
+											allFinalSkills.filter((skill) => {
+												const skillData =
+													getSkillByName(skill);
+												return (
+													skillData?.ability ===
+													ability
+												);
+											})}
+
+										{#if skillsForAbility.length > 0}
+											<div class="text-sm">
+												<span
+													class="font-medium text-gray-700"
+													>{ability}:</span
+												>
+												<span class="text-gray-600">
+													{skillsForAbility.join(
+														", ",
+													)}
+												</span>
+											</div>
+										{/if}
+									{/each}
+								</div>
+
+								<!-- Total Skills Count -->
+								<div class="mt-3 pt-2 border-t border-gray-200">
+									<div
+										class="text-sm font-medium text-gray-700"
+									>
+										Total Skills: {selectedSkills.length +
+											(selectedBackground
+												?.skillProficiencies.length ||
+												0)}
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Navigation buttons for Step 7 -->
+				<div class="flex justify-between mt-8">
+					<button
+						onclick={() => (currentStep = 6)}
+						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
+					>
+						← Back
+					</button>
+
+					<button
+						onclick={() => (currentStep = 8)}
+						disabled={!canProceedFromSkills ||
+							(hasSkillOverlaps && !areAllReplacementsSelected())}
+						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+					>
+						Next →
+					</button>
+				</div>
+			</div>
+		{/if}
+		<!-- ✅ STEP 8: ALL EQUIPMENT SELECTION -->
+		{#if currentStep === 8}
+			<div class="p-6">
+				<h2 class="text-2xl font-bold mb-4">
+					⚔️ Choose Your Equipment
+					{#if creationMethod === "quick"}
+						<span class="text-sm font-normal text-green-600"
+							>(Quick Build)</span
+						>
+					{:else if creationMethod === "random"}
+						<span class="text-sm font-normal text-purple-600"
+							>(Random)</span
+						>
+					{:else}
+						<span class="text-sm font-normal text-blue-600"
+							>(Standard)</span
+						>
+					{/if}
+				</h2>
+
+				<p class="text-gray-600 mb-6">
+					Your equipment determines your character's capabilities and
+					survival in adventures.
+				</p>
+
+				<!-- Equipment Grid - displays all equipment with consistent alignment -->
+				<div
+					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
+				>
+					{#each ALL_EQUIPMENT as equipment}
+						{@const isSelected = selectedEquipment?.includes(
+							equipment.name,
+						)}
+
+						<button
+							onclick={() => selectEquipment(equipment)}
+							disabled={creationMethod === "random"}
+							class="h-full p-4 border-2 rounded-lg text-left transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 flex flex-col"
+							class:border-blue-500={isSelected}
+							class:bg-blue-50={isSelected}
+							class:border-gray-200={!isSelected}
+							class:hover:border-blue-300={!isSelected &&
+								creationMethod !== "random"}
+							class:bg-gray-100={creationMethod === "random"}
+							class:cursor-not-allowed={creationMethod ===
+								"random"}
+						>
+							<!-- Equipment Header -->
+							<div
+								class="flex items-center justify-between mb-2 min-h-[2rem]"
+							>
+								<div class="flex items-center space-x-2">
+									<span
+										class="text-xl"
+										role="img"
+										aria-label="{equipment.name} emoji"
+									>
+										{equipment.emoji}
+									</span>
+									<h3
+										class="font-semibold text-lg leading-tight"
+									>
+										{equipment.name}
+									</h3>
+								</div>
+
+								<div class="flex-shrink-0">
+									{#if isSelected}
+										<svg
+											class="w-5 h-5 text-blue-500"
+											fill="currentColor"
+											viewBox="0 0 20 20"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									{:else}
+										<div class="w-5 h-5"></div>
+									{/if}
+								</div>
+							</div>
+
+							<!-- Equipment Description -->
+							<div class="flex-grow">
+								<p
+									class="text-sm text-gray-600 mb-3 min-h-[2.5rem] leading-relaxed"
+								>
+									{equipment.description}
+								</p>
+
+								<!-- Equipment Stats -->
+								<div class="mb-3">
+									<div
+										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
+									>
+										{#if equipment.damage}
+											Damage
+										{:else if equipment.armorClass}
+											Armor Class
+										{:else}
+											Type
+										{/if}
+									</div>
+									<div
+										class="text-sm font-medium text-green-600"
+									>
+										{equipment.damage ||
+											equipment.armorClass ||
+											equipment.type}
+									</div>
+								</div>
+
+								<!-- Properties -->
+								<div class="mb-3">
+									<div
+										class="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide"
+									>
+										Properties
+									</div>
+									<div
+										class="flex flex-wrap gap-1 min-h-[1.5rem]"
+									>
+										{#each equipment.properties?.slice(0, 3) || [] as property}
+											<span
+												class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+											>
+												{property}
+											</span>
+										{/each}
+										{#if equipment.properties && equipment.properties.length > 3}
+											<span
+												class="text-xs text-gray-500 px-2 py-1"
+											>
+												+{equipment.properties.length -
+													3} more
+											</span>
+										{/if}
+									</div>
+								</div>
+							</div>
+
+							<!-- Cost and Weight -->
+							<div
+								class="text-xs text-gray-500 mt-auto pt-2 border-t border-gray-100"
+							>
+								<div class="flex items-center justify-between">
+									<span
+										>Cost: <span class="font-medium"
+											>{equipment.cost}</span
+										></span
+									>
+									<span
+										>Weight: <span class="font-medium"
+											>{equipment.weight}</span
+										></span
+									>
+								</div>
+							</div>
+						</button>
+					{/each}
+				</div>
+
+				<!-- Navigation buttons -->
+				<div class="flex justify-between mt-8">
+					<button
+						onclick={() => (currentStep = 7)}
+						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
+					>
+						← Back
+					</button>
+
+					<button
+						onclick={() => (currentStep = 9)}
+						class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+					>
+						Next →
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		<!-- ✅ STEP 9: CHARACTER DETAILS -->
+		{#if currentStep === 9}
 			<div class="p-6">
 				<h2 class="text-2xl font-bold mb-4">
 					🧙‍♂️ Character Details
@@ -2276,11 +2962,15 @@
 					</div>
 				</div>
 
-				<!-- Navigation buttons for Step 6 -->
+				<!-- Navigation buttons for Step 8 -->
 				<div class="flex justify-between mt-8">
 					<button
-						onclick={() => (currentStep = 4)}
-						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-lg"
+						onclick={() => {
+							resetEquipmentSelection();
+							currentStep = 8;
+						}}
+						disabled={equipmentMethod === "gold"}
+						class="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
 					>
 						← Back
 					</button>
@@ -2349,8 +3039,8 @@
 			</div>
 		{/if}
 
-		<!-- ✅ STEP 8: PLAYER PREFERENCES -->
-		{#if currentStep === 8}
+		<!-- ✅ STEP 10: PLAYER PREFERENCES -->
+		{#if currentStep === 10}
 			<PlayerPreferencesForm
 				collaborativeMode={false}
 				onBack={() => (currentStep = 5)}

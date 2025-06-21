@@ -104,7 +104,7 @@ interface BackgroundStep {
   ];
 }
 ```
-### **Step 7: Skills & Proficiencies**
+### **Step 7: Skill Resolution**
 ```typescript
 interface SkillsStep {
   // Based on class and background
